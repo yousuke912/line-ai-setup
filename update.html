@@ -254,13 +254,17 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="prog-step" id="pA4"><div class="prog-circle" id="pcA4">✓</div><div class="prog-label">完了</div></div>
     </div>
     <div class="step-card">
-      <div class="step-num">STEP A-1 // 既存の認証情報を入力</div>
+      <div class="step-num">STEP A-1 // 認証情報を入力</div>
       <h2 class="step-h">LINEトークンとAPIキーを入力してください</h2>
-      <p class="step-p">既存GASに設定したものと同じ値を入力します。入力した情報はこのブラウザの中だけで使われ、外部には送信されません。</p>
+      <p class="step-p">入力した情報はこのブラウザの中だけで使われ、外部には送信されません。</p>
 
       <div class="box box-green">
-        <div class="box-title">📋 確認場所</div>
-        <p><a href="https://script.google.com" target="_blank" style="color:var(--green)">script.google.com</a> → 既存プロジェクトを開く → 左メニューの<strong>歯車アイコン</strong>（プロジェクトの設定）→ <strong>スクリプトプロパティ</strong></p>
+        <div class="box-title">📋 LINEトークンの取得手順</div>
+        <p><a href="https://developers.line.biz/" target="_blank" style="color:var(--green)">LINE Developers</a> を開く → チャンネルを選択 → 上部タブ「<strong>Messaging API設定</strong>」をクリック → 一番下までスクロール → 「<strong>発行</strong>」ボタンをクリック → コピー</p>
+      </div>
+      <div class="box box-warn">
+        <div class="box-title">⚠️ スクリプトプロパティからコピーしないでください</div>
+        <p>GASのスクリプトプロパティ画面からそのままコピーするとトークンが途中で切れてLINEが動かなくなります。<strong>必ずLINE Developersから取得してください。</strong></p>
       </div>
 
       <div class="form-group">
