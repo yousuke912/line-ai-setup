@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LINE AI秘書 アップデート手順 | 既存ユーザー向け</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7faf7;
+  --surface:#ffffff;
+  --surface2:#f0f5f0;
+  --green:#06C755;
+  --green-mid:#04a044;
+  --green-glow:rgba(6,199,85,0.10);
+  --green-border:rgba(6,199,85,0.35);
+  --text:#1a2e1d;
+  --text-dim:#5a7a5e;
+  --error:#dc2626;
+  --warn:#d97706;
+  --code-bg:#f0f5f0;
+  --border:rgba(0,0,0,0.09);
+  --radius:14px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;min-height:100vh;font-size:15px;line-height:1.75;overflow-x:hidden}
+
+/* グリッドノイズ背景 */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(6,199,85,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(6,199,85,0.07) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1}
+
+/* ヘッダー */
+.hd{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(247,250,247,0.95);backdrop-filter:blur(12px);z-index:100}
+.hd-logo{font-family:'DM Mono',monospace;font-size:13px;color:var(--green);letter-spacing:.06em}
+.hd-badge{font-family:'DM Mono',monospace;font-size:11px;background:var(--green-glow);border:1px solid var(--green-border);color:var(--green);padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+.container{max-width:700px;margin:0 auto;padding:48px 20px 100px}
+
+/* ヒーロー */
+.hero{text-align:center;padding:48px 0 40px}
+.hero-tag{font-family:'DM Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.15em;background:var(--green-glow);border:1px solid var(--green-border);padding:5px 14px;border-radius:20px;display:inline-block;margin-bottom:20px}
+.hero-title{font-size:clamp(28px,6vw,44px);font-weight:900;line-height:1.2;margin-bottom:14px}
+.hero-title em{color:var(--green);font-style:normal}
+.hero-sub{color:var(--text-dim);font-size:14px;max-width:420px;margin:0 auto 32px;line-height:1.8}
+.hero-meta{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+.hero-meta-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim)}
+.hero-meta-item span{color:var(--green)}
+
+/* 区切り */
+.divider{height:1px;background:var(--border);margin:40px 0}
+
+/* セクションタイトル */
+.section-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.12em;margin-bottom:8px}
+.section-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.section-desc{color:var(--text-dim);font-size:13px;margin-bottom:24px;line-height:1.8}
+
+/* カード */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px;transition:border-color .2s}
+.card:hover{border-color:var(--green-border)}
+.card-title{font-size:15px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card-desc{font-size:13px;color:var(--text-dim);line-height:1.8}
+
+/* 理由リスト */
+.reason-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px}
+.reason-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.reason-icon{font-size:24px;margin-bottom:10px}
+.reason-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.reason-desc{font-size:12px;color:var(--text-dim);line-height:1.7}
+
+/* ステッパー */
+.progress-bar{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+.prog-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
+.prog-circle{width:38px;height:38px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-family:'DM Mono',monospace;color:var(--text-dim);background:var(--bg);transition:all .3s;flex-shrink:0}
+.prog-step.active .prog-circle{border-color:var(--green);color:var(--green);background:var(--green-glow);box-shadow:0 0 14px rgba(6,199,85,.2)}
+.prog-step.done .prog-circle{border-color:var(--green);background:var(--green);color:#000;font-weight:700}
+.prog-label{font-size:10px;color:var(--text-dim);text-align:center;white-space:nowrap}
+.prog-step.active .prog-label,.prog-step.done .prog-label{color:var(--green)}
+.prog-line{flex:1;height:1px;background:var(--border);transition:background .3s;min-width:8px}
+.prog-step.done + .prog-line{background:var(--green)}
+
+/* 画面切り替え */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ステップカード */
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px;margin-bottom:16px}
+.step-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.1em;margin-bottom:8px}
+.step-h{font-size:20px;font-weight:700;margin-bottom:6px}
+.step-p{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.8}
+
+/* 情報ボックス */
+.box{border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:18px}
+.box-green{background:rgba(6,199,85,0.07);border-left:3px solid var(--green)}
+.box-warn{background:rgba(245,166,35,0.07);border-left:3px solid var(--warn)}
+.box p{font-size:13px;color:var(--text-dim);line-height:1.85}
+.box strong{color:var(--text)}
+.box .box-title{font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px;font-family:'DM Mono',monospace;letter-spacing:.08em}
+.box-warn .box-title{color:var(--warn)}
+
+/* フォーム */
+.form-group{margin-bottom:20px}
+.form-label{font-size:11px;font-family:'DM Mono',monospace;color:var(--green);letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.req{color:var(--error);font-size:10px}
+.input-wrap{position:relative}
+.input{width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px 44px 13px 15px;color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.input::placeholder{color:var(--text-dim)}
+.input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow)}
+.input.ok{border-color:var(--green)}
+.input.ng{border-color:var(--error)}
+.ico{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+.hint{font-size:11px;color:var(--text-dim);margin-top:5px}
+.err{font-size:11px;color:var(--error);margin-top:5px;display:none}
+.wrn{font-size:11px;color:var(--warn);margin-top:5px;display:none}
+
+/* コードブロック */
+.code-wrap{position:relative;margin-bottom:18px}
+.code{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:20px;font-family:'DM Mono',monospace;font-size:11px;color:#1a5c2a;line-height:1.9;overflow-x:auto;white-space:pre;max-height:360px;overflow-y:auto}
+.copy-btn{position:absolute;top:10px;right:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);padding:5px 13px;border-radius:7px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .2s;z-index:1}
+.copy-btn:hover{border-color:var(--green);color:var(--green)}
+.copy-btn.done{background:rgba(6,199,85,.1);border-color:var(--green);color:var(--green)}
+
+/* 手順番号リスト */
+.how-list{list-style:none;display:flex;flex-direction:column;gap:16px;counter-reset:n}
+.how-list li{display:flex;align-items:flex-start;gap:14px;counter-increment:n;font-size:14px}
+.how-list li::before{content:counter(n);min-width:28px;height:28px;border-radius:50%;background:var(--green-glow);border:1px solid var(--green-border);color:var(--green);font-family:'DM Mono',monospace;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-weight:500}
+.how-list li .txt{line-height:1.75}
+.how-list li .sub{display:block;font-size:12px;color:var(--text-dim);margin-top:4px;line-height:1.7}
+.how-list li code{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 7px;font-family:'DM Mono',monospace;font-size:12px;color:var(--green)}
+
+/* 完了 */
+.done-icon{font-size:54px;text-align:center;margin-bottom:16px;animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(.4);opacity:0}80%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.done-title{font-size:26px;font-weight:900;text-align:center;margin-bottom:8px}
+.done-title em{color:var(--green);font-style:normal}
+.done-sub{text-align:center;color:var(--text-dim);font-size:13px;margin-bottom:28px}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.feat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.feat-ic{font-size:20px;margin-bottom:6px}
+.feat-name{font-size:12px;font-weight:700;margin-bottom:3px}
+.feat-desc{font-size:11px;color:var(--text-dim);line-height:1.6}
+
+/* ボタン */
+.btn{width:100%;background:var(--green);color:#000;border:none;padding:16px;border-radius:10px;font-size:15px;font-weight:700;font-family:'Zen Kaku Gothic New',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.02em}
+.btn:hover{background:#07e060;box-shadow:0 6px 24px rgba(6,199,85,.3);transform:translateY(-1px)}
+.btn:active{transform:none;box-shadow:none}
+.btn-ghost{width:100%;background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:13px;border-radius:10px;font-size:13px;font-family:'Zen Kaku Gothic New',sans-serif;cursor:pointer;transition:all .2s;margin-top:10px}
+.btn-ghost:hover{border-color:var(--green);color:var(--green)}
+.btn-back{background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer;padding:8px 0;display:flex;align-items:center;gap:4px;margin-bottom:14px;font-family:'Zen Kaku Gothic New',sans-serif}
+.btn-back:hover{color:var(--text)}
+
+@media(max-width:500px){
+  .reason-grid,.feat-grid{grid-template-columns:1fr}
+  .hero-title{font-size:28px}
+  .prog-label{font-size:9px}
+  .prog-circle{width:30px;height:30px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hd">
+  <div class="hd-logo">LINE AI秘書 // アップデート</div>
+  <div class="hd-badge"><span class="dot"></span>v3.3 公開中</div>
+</header>
+
+<main class="container">
+
+  <!-- ===== 準備画面 ===== -->
+  <div class="screen active" id="s0">
+
+    <div class="hero">
+      <div class="hero-tag">EXISTING USER UPDATE</div>
+      <h1 class="hero-title">LINE AI秘書を<br><em>最新版にしよう</em></h1>
+      <p class="hero-sub">2つの更新作業があります。どちらも簡単で、合計10分もあれば完了します。</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><span>⏱</span> 所要時間：約10分</div>
+        <div class="hero-meta-item"><span>💻</span> PCでの作業推奨</div>
+        <div class="hero-meta-item"><span>✅</span> 作業は今回が最後</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">WHY UPDATE</div>
+    <div class="section-title">なぜ更新が必要なの？</div>
+    <p class="section-desc">今回の更新で解消されること・できるようになることです。</p>
+
+    <div class="reason-grid">
+      <div class="reason-card">
+        <div class="reason-icon">🔴</div>
+        <div class="reason-title">エラーが止まる</div>
+        <div class="reason-desc">「Argument too large」などのエラーメッセージが出なくなります</div>
+      </div>
+      <div class="reason-card">
+        <div class="reason-icon">⚡</div>
+        <div class="reason-title">速くなる</div>
+        <div class="reason-desc">AIの応答が平均2〜4秒に短縮。コードの最適化で安定します</div>
+      </div>
+      <div class="reason-card">
+        <div class="reason-icon">🎨</div>
+        <div class="reason-title">ヘルプが21機能に</div>
+        <div class="reason-desc">「ヘルプ」と送ると全21機能がカードで一覧表示されます</div>
+      </div>
+      <div class="reason-card">
+        <div class="reason-icon">🔮</div>
+        <div class="reason-title">今後の更新が自動に</div>
+        <div class="reason-desc">この更新を終えれば、以後の機能追加はすべて自動で適用されます</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">WHAT TO DO</div>
+    <div class="section-title">やることは2つです</div>
+    <p class="section-desc">どちらも「GASを開いてコードを貼り替えるだけ」です。難しくありません。</p>
+
+    <div class="card">
+      <div class="card-title"><span style="background:var(--green);color:#000;font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px">STEP A</span>本体コードのアップデート（約5分）</div>
+      <p class="card-desc">AIの機能を担う本体コードを最新版に入れ替えます。入力フォームにトークンを貼り付けるとコードが自動生成されます。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span style="background:rgba(245,166,35,.15);color:var(--warn);font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid rgba(245,166,35,.3)">STEP B</span>loader.gsの更新（約3分）</div>
+      <p class="card-desc">GASに最初に貼り付けたファイルです。ここだけ自動更新されないため、今回1回だけ手動で更新します。<strong style="color:var(--text)">これが終われば今後は何もしなくてOKです。</strong></p>
+    </div>
+
+    <div class="box box-green" style="margin-top:8px">
+      <div class="box-title">💡 どっちが先？</div>
+      <p>どちらを先にやっても構いません。ただし<strong>STEP A → STEP B の順</strong>が確認しやすくておすすめです。</p>
+    </div>
+
+    <button class="btn" onclick="show('sA0')">STEP A から始める →</button>
+    <button class="btn-ghost" onclick="show('sB0')">先に STEP B（loader.gs更新）をやる</button>
+
+  </div><!-- /s0 -->
+
+
+  <!-- ===== STEP A: 本体コードアップデート ===== -->
+
+  <!-- A-準備 -->
+  <div class="screen" id="sA0">
+    <button class="btn-back" onclick="show('s0')">← 最初に戻る</button>
+    <div class="progress-bar" id="pbA">
+      <div class="prog-step active" id="pA1"><div class="prog-circle" id="pcA1">A1</div><div class="prog-label">情報入力</div></div>
+      <div class="prog-line" id="plA1"></div>
+      <div class="prog-step" id="pA2"><div class="prog-circle" id="pcA2">A2</div><div class="prog-label">コード生成</div></div>
+      <div class="prog-line" id="plA2"></div>
+      <div class="prog-step" id="pA3"><div class="prog-circle" id="pcA3">A3</div><div class="prog-label">GAS貼付け</div></div>
+      <div class="prog-line" id="plA3"></div>
+      <div class="prog-step" id="pA4"><div class="prog-circle" id="pcA4">✓</div><div class="prog-label">完了</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">STEP A-1 // 既存の認証情報を入力</div>
+      <h2 class="step-h">LINEトークンとAPIキーを入力してください</h2>
+      <p class="step-p">既存GASに設定したものと同じ値を入力します。入力した情報はこのブラウザの中だけで使われ、外部には送信されません。</p>
+
+      <div class="box box-green">
+        <div class="box-title">📋 確認場所</div>
+        <p><a href="https://script.google.com" target="_blank" style="color:var(--green)">script.google.com</a> → 既存プロジェクトを開く → 左メニューの<strong>歯車アイコン</strong>（プロジェクトの設定）→ <strong>スクリプトプロパティ</strong></p>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">LINE CHANNEL ACCESS TOKEN <span class="req">*必須</span></div>
+        <div class="input-wrap">
+          <input type="text" class="input" id="aToken" placeholder="既存のLINEトークンを入力..." oninput="vToken()">
+          <span class="ico" id="aTokenIco"></span>
+        </div>
+        <div class="err" id="aTokenErr">LINEトークンを入力してください</div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">ANTHROPIC API KEY <span class="req">*必須</span></div>
+        <div class="box box-green" style="margin-bottom:14px">
+          <div class="box-title">📋 確認・取得方法</div>
+          <p><strong>既存GASから確認する場合：</strong><br>
+          GASエディタ → 歯車アイコン（プロジェクトの設定）→ スクリプトプロパティ → <strong>ANTHROPIC_API_KEY</strong> の値をコピー</p>
+          <p style="margin-top:10px"><strong>新しいキーを発行する場合：</strong><br>
+          <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → 左メニュー「<strong>API Keys</strong>」→「<strong>Create Key</strong>」→ コピー</p>
+        </div>
+        <div class="input-wrap">
+          <input type="password" class="input" id="aKey" placeholder="sk-ant-..." oninput="vKey()">
+          <span class="ico" id="aKeyIco"></span>
+        </div>
+        <p class="hint">「sk-ant-」で始まるAPIキーを入力してください</p>
+        <div class="wrn" id="aKeyWrn">⚠️「sk-ant-」で始まらないAPIキーです。確認してください（このまま次へ進むことも可能です）</div>
+        <div class="err" id="aKeyErr">APIキーを入力してください</div>
+      </div>
+    </div>
+    <button class="btn" onclick="goA(2)">次へ進む →</button>
+  </div>
+
+  <!-- A2: コード生成 -->
+  <div class="screen" id="sA1">
+    <button class="btn-back" onclick="goA(1)">← 戻る</button>
+    <div class="progress-bar" id="pbA2">
+      <div class="prog-step done" id="pA21"><div class="prog-circle" id="pcA21">✓</div><div class="prog-label">情報入力</div></div>
+      <div class="prog-line" style="background:var(--green)"></div>
+      <div class="prog-step active" id="pA22"><div class="prog-circle">A2</div><div class="prog-label">コード生成</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">A3</div><div class="prog-label">GAS貼付け</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">✓</div><div class="prog-label">完了</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">STEP A-2 // コードが生成されました</div>
+      <h2 class="step-h">このコードをコピーしてください</h2>
+      <p class="step-p">あなたのLINEトークンとAPIキーが埋め込まれたGASコードが生成されました。右上の「コピー」ボタンを押してください。</p>
+      <div class="code-wrap">
+        <pre class="code" id="aCode"></pre>
+        <button class="copy-btn" id="aCopyBtn" onclick="copyA()">コピー</button>
+      </div>
+      <div class="box box-green">
+        <p>🔒 <strong>安全について：</strong>入力したトークン・APIキーはこのブラウザ内のみで使われます。サーバーには一切送信・保存されません。</p>
+      </div>
+    </div>
+    <button class="btn" onclick="goA(3)">コピーしました → 次へ</button>
+  </div>
+
+  <!-- A3: GAS手順 -->
+  <div class="screen" id="sA2">
+    <button class="btn-back" onclick="goA(2)">← 戻る</button>
+    <div class="progress-bar">
+      <div class="prog-step done"><div class="prog-circle">✓</div><div class="prog-label">情報入力</div></div>
+      <div class="prog-line" style="background:var(--green)"></div>
+      <div class="prog-step done"><div class="prog-circle">✓</div><div class="prog-label">コード生成</div></div>
+      <div class="prog-line" style="background:var(--green)"></div>
+      <div class="prog-step active"><div class="prog-circle" style="border-color:var(--green);color:var(--green);background:var(--green-glow)">A3</div><div class="prog-label" style="color:var(--green)">GAS貼付け</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">✓</div><div class="prog-label">完了</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">STEP A-3 // GASに貼り付けて実行</div>
+      <h2 class="step-h">以下の手順でGASを更新してください</h2>
+      <p class="step-p">コピーしたコードをGASに貼り付けます。既存のプロジェクトを上書きするので、URLは変わりません。</p>
+      <ol class="how-list">
+        <li><span class="txt"><a href="https://script.google.com" target="_blank" style="color:var(--green)">script.google.com</a> を開いて、既存のLINE AI秘書プロジェクトをクリックして開く<span class="sub">プロジェクト一覧に「LINE AI秘書」という名前のものがあるはずです</span></span></li>
+        <li><span class="txt">エディタ内のコードを全選択（<code>Ctrl+A</code> または <code>⌘+A</code>）→ 削除 → コピーしたコードを貼り付け（<code>Ctrl+V</code> または <code>⌘+V</code>）</span></li>
+        <li><span class="txt">保存ボタン（フロッピーアイコン💾）をクリックして保存</span></li>
+        <li><span class="txt">上部の関数選択欄で <code>setupLineAI</code> を選択 → ▶ 実行ボタンをクリック<span class="sub">「このアプリはGoogleで確認されていません」と出たら → 「詳細」→「安全ではないページに移動」→「許可」で進んでください</span></span></li>
+        <li><span class="txt">次に関数選択欄で <code>testAllPermissions</code> を選択 → ▶ 実行 → 権限をすべて許可</span></li>
+        <li><span class="txt">「デプロイ」→「<strong>デプロイを管理</strong>」→ 鉛筆アイコン（編集）→ バージョンを「<strong>新しいバージョン</strong>」に変更 → 「デプロイ」<span class="sub">⚠️「新しいデプロイ」ではなく「デプロイを管理」から更新してください。URLが変わりません。</span></span></li>
+        <li><span class="txt">LINEで「<strong>ヘルプ</strong>」と送信 → カードメニューが表示されたらSTEP A完了！🎉</span></li>
+      </ol>
+    </div>
+    <button class="btn" onclick="goA(4)">STEP A 完了！→ 次へ</button>
+  </div>
+
+  <!-- A完了 -->
+  <div class="screen" id="sA3">
+    <div class="step-card">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">STEP A<em>完了</em></div>
+      <p class="done-sub">v3.3の本体コードへのアップデートが完了しました！</p>
+      <div class="feat-grid">
+        <div class="feat"><div class="feat-ic">📎</div><div class="feat-name">Gmail添付自動保存</div><div class="feat-desc">添付ファイルをDriveに自動保存</div></div>
+        <div class="feat"><div class="feat-ic">⏰</div><div class="feat-name">毎月第N曜日リマインダー</div><div class="feat-desc">柔軟な繰り返し設定が可能に</div></div>
+        <div class="feat"><div class="feat-ic">📁</div><div class="feat-name">ドライブ管理</div><div class="feat-desc">フォルダ・ファイル操作をLINEから</div></div>
+        <div class="feat"><div class="feat-ic">🗺</div><div class="feat-name">経路・乗換検索</div><div class="feat-desc">マップリンクをLINEで受け取る</div></div>
+        <div class="feat"><div class="feat-ic">⚡</div><div class="feat-name">応答速度向上</div><div class="feat-desc">平均2〜4秒に大幅短縮</div></div>
+        <div class="feat"><div class="feat-ic">🎨</div><div class="feat-name">21機能カルーセル</div><div class="feat-desc">「ヘルプ」で全機能を確認</div></div>
+      </div>
+      <div class="box box-warn">
+        <div class="box-title">⚡ あと1ステップ残っています</div>
+        <p>このまま<strong>STEP B（loader.gs更新）</strong>も済ませてください。約3分で完了します。これで今後の作業は一切不要になります。</p>
+      </div>
+    </div>
+    <button class="btn" onclick="show('sB0')">STEP B（loader.gs更新）へ進む →</button>
+    <button class="btn-ghost" onclick="show('s0')">← 最初に戻る</button>
+  </div>
+
+
+  <!-- ===== STEP B: loader.gs 更新 ===== -->
+
+  <!-- B-準備 -->
+  <div class="screen" id="sB0">
+    <button class="btn-back" onclick="show('s0')">← 最初に戻る</button>
+    <div class="progress-bar">
+      <div class="prog-step active"><div class="prog-circle" style="border-color:var(--green);color:var(--green);background:var(--green-glow)">B1</div><div class="prog-label" style="color:var(--green)">コードコピー</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">B2</div><div class="prog-label">GAS貼付け</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">✓</div><div class="prog-label">完了</div></div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">STEP B-1 // loader.gsをコピー</div>
+      <h2 class="step-h">新しいloader.gsをコピーしてください</h2>
+      <p class="step-p">以下のコードをそのままコピーしてください。<strong style="color:var(--text)">入力不要です。</strong>LINEトークンやAPIキーはGASにすでに保存されているので、貼り付けるだけで動きます。</p>
+
+      <div class="box box-green">
+        <div class="box-title">🔧 loader.gsって何？</div>
+        <p>LINEからのメッセージを受け取って、本体コードに橋渡しする小さなプログラムです。今回の更新版は<strong>汎用ディスパッチャー設計</strong>になっており、今後どんな機能が追加されても<strong>このファイルを変更する必要は永久にありません。</strong>これが最後の手動作業です。</p>
+      </div>
+
+      <div class="code-wrap">
+        <pre class="code" id="bCode"></pre>
+        <button class="copy-btn" id="bCopyBtn" onclick="copyB()">コピー</button>
+      </div>
+    </div>
+    <button class="btn" onclick="show('sB1')">コピーしました → 次へ</button>
+  </div>
+
+  <!-- B2: GAS手順 -->
+  <div class="screen" id="sB1">
+    <button class="btn-back" onclick="show('sB0')">← 戻る</button>
+    <div class="progress-bar">
+      <div class="prog-step done"><div class="prog-circle">✓</div><div class="prog-label">コードコピー</div></div>
+      <div class="prog-line" style="background:var(--green)"></div>
+      <div class="prog-step active"><div class="prog-circle" style="border-color:var(--green);color:var(--green);background:var(--green-glow)">B2</div><div class="prog-label" style="color:var(--green)">GAS貼付け</div></div>
+      <div class="prog-line"></div>
+      <div class="prog-step"><div class="prog-circle">✓</div><div class="prog-label">完了</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">STEP B-2 // GASに貼り付けて完了</div>
+      <h2 class="step-h">既存GASに貼り付けて実行してください</h2>
+      <p class="step-p">STEP Aと同じプロジェクトを使います。</p>
+      <ol class="how-list">
+        <li><span class="txt"><a href="https://script.google.com" target="_blank" style="color:var(--green)">script.google.com</a> を開いて、LINE AI秘書プロジェクトを開く</span></li>
+        <li><span class="txt">エディタのコードを全選択（<code>Ctrl+A</code> / <code>⌘+A</code>）→ 削除 → コピーしたloader.gsを貼り付け（<code>Ctrl+V</code> / <code>⌘+V</code>）</span></li>
+        <li><span class="txt">保存ボタン（💾）をクリック</span></li>
+        <li><span class="txt">関数選択欄で <code>testAllPermissions</code> を選択 → ▶ 実行 → 権限をすべて許可<span class="sub">スクリプトプロパティはそのまま引き継がれます。再入力不要です。</span></span></li>
+        <li><span class="txt">「デプロイ」→「<strong>デプロイを管理</strong>」→ 鉛筆アイコン → バージョン「<strong>新しいバージョン</strong>」→「デプロイ」</span></li>
+        <li><span class="txt">LINEで「<strong>こんにちは</strong>」と送信 → 正常に返事が来たら完了！🎉</span></li>
+      </ol>
+      <div class="box box-warn" style="margin-top:20px">
+        <p>⚠️ <strong>「新しいデプロイ」ではなく「デプロイを管理」</strong>から更新してください。「新しいデプロイ」を選ぶとWebhook URLが変わって、LINE側の再設定が必要になります。</p>
+      </div>
+    </div>
+    <button class="btn" onclick="show('sFin')">全部完了！→ 完了画面へ</button>
+  </div>
+
+  <!-- 全完了 -->
+  <div class="screen" id="sFin">
+    <div class="step-card">
+      <div class="done-icon">🚀</div>
+      <div class="done-title">全ての更新が<em>完了</em>しました！</div>
+      <p class="done-sub">お疲れさまでした。これで今後の作業は一切不要です。</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+        <div style="background:var(--surface2);border:1px solid var(--green-border);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:20px;margin-bottom:6px">✅</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:3px">本体コード</div>
+          <div style="font-size:11px;color:var(--text-dim)">自動更新で常に最新</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--green-border);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:20px;margin-bottom:6px">✅</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:3px">loader.gs</div>
+          <div style="font-size:11px;color:var(--text-dim)">永久に変更不要 ✅</div>
+        </div>
+      </div>
+      <div class="box box-green">
+        <div class="box-title">💬 さっそく試してみましょう</div>
+        <p>LINEで「<strong>ヘルプ</strong>」と送るとカードメニューが表示されます。<br>「今日の予定は？」「メール確認して」などが使えます。</p>
+      </div>
+    </div>
+    <button class="btn-ghost" onclick="show('s0')">← 最初に戻る</button>
+  </div>
+
+</main>
+</div>
+
+<script>
+const LOADER_URL='https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3RF3SJVIKuIG0WFGyMzmlbvy--O9qqoDiXLi4zP4O-xw/exec';
+const MAIN_DOC_ID='1SrEvMuCcXjgPByRZDlPVEGaWuMrbKbnFk5Z_KYarGRI';
+
+const LOADER_CODE=`/**
+ * LINE AI秘書 loader.gs v3.3（永続対応版）
+ * copyright キッシュ
+ *
+ * ▼ このファイルをGASに全文貼り付けて保存してください
+ * ▼ スクリプトプロパティは再入力不要です（引き継がれます）
+ * ▼ 貼り付け後は testAllPermissions を実行してから再デプロイしてください
+ * ▼ 今後このファイルを変更する必要は永久にありません
+ */
+function getLoaderUrl(){
+  return PropertiesService.getScriptProperties().getProperty('LOADER_URL')||'';
+}
+function getRemoteCode(){
+  var cache=CacheService.getScriptCache();
+  var cacheKey='remote_code_v1';
+  var code=cache.get(cacheKey);
+  if(code){return code;}
+  var loaderUrl=getLoaderUrl();
+  if(!loaderUrl){Logger.log('LOADER_URL が未設定です');return null;}
+  try{
+    var sep=loaderUrl.indexOf('?')===-1?'?':'&';
+    var res=UrlFetchApp.fetch(loaderUrl+sep+'type=code',{muteHttpExceptions:true});
+    var txt=res.getContentText();
+    if(txt.indexOf('system_prompt')!==-1||txt.indexOf('<html')!==-1){
+      var alt=PropertiesService.getScriptProperties().getProperty('LOADER_CODE_URL');
+      if(alt){res=UrlFetchApp.fetch(alt,{muteHttpExceptions:true});txt=res.getContentText();}
+    }
+    if(!txt||txt.indexOf('function')===-1){Logger.log('コード取得失敗: '+txt.slice(0,200));return null;}
+    try{cache.put(cacheKey,txt,3600);Logger.log('コード取得・キャッシュ完了（'+txt.length+'文字）');}
+    catch(ce){Logger.log('キャッシュ容量超過のため毎回取得モードで動作します');}
+    return txt;
+  }catch(e){Logger.log('コード取得エラー: '+e.toString());return null;}
+}
+function loadAndExec(funcName,arg){
+  var code=getRemoteCode();
+  if(!code){return ContentService.createTextOutput('OK');}
+  try{
+    var fn=eval('(function(){\n'+code+'\nreturn typeof '+funcName+' !== "undefined" ? '+funcName+' : null;\n})()');
+    if(typeof fn==='function'){
+      var result=fn(arg);
+      return result!==undefined?result:ContentService.createTextOutput('OK');
+    }
+    Logger.log('関数が見つかりません: '+funcName);
+  }catch(e){
+    Logger.log('実行エラー ['+funcName+']: '+e.toString());
+    try{
+      var cfg=PropertiesService.getScriptProperties();
+      var tok=cfg.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+      var uid=cfg.getProperty('LINE_USER_ID');
+      if(tok&&uid){
+        UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push',{
+          method:'post',contentType:'application/json',
+          headers:{Authorization:'Bearer '+tok},
+          payload:JSON.stringify({to:uid,messages:[{type:'text',text:'🔴 エラーが発生しました\n\n'+e.toString()+'\n\nAPIクレジット残高もご確認ください\nhttps://console.anthropic.com → Billing'}]}),
+          muteHttpExceptions:true
+        });
+      }
+    }catch(e2){}
+  }
+  return ContentService.createTextOutput('OK');
+}
+function doPost(e){return loadAndExec('doPost',e);}
+function checkReminders(){loadAndExec('checkReminders',null);}
+function morningBriefing(){loadAndExec('morningBriefing',null);}
+function dailyCheck(){loadAndExec('dailyCheck',null);}
+function testAllPermissions(){loadAndExec('testAllPermissions',null);}
+function testSetup(){loadAndExec('testSetup',null);}
+function clearCodeCache(){CacheService.getScriptCache().remove('remote_code_v1');Logger.log('キャッシュをクリアしました');}
+function checkConnection(){
+  var url=getLoaderUrl();if(!url){Logger.log('NG: LOADER_URL未設定');return;}
+  try{
+    var sep=url.indexOf('?')===-1?'?':'&';
+    var data=JSON.parse(UrlFetchApp.fetch(url+sep+'type=version',{muteHttpExceptions:true}).getContentText());
+    if(data._status==='ok'){Logger.log('✅ 接続OK / v'+data.version);}else{Logger.log('❌ '+JSON.stringify(data));}
+  }catch(e){Logger.log('❌ 接続エラー: '+e.toString());}
+}`
+
+document.getElementById('bCode').textContent=LOADER_CODE;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goA(n){
+  if(n===2){
+    const tok=document.getElementById('aToken').value.trim();
+    const key=document.getElementById('aKey').value.trim();
+    if(!tok){document.getElementById('aTokenErr').style.display='block';document.getElementById('aToken').classList.add('ng');return;}
+    if(!key){document.getElementById('aKeyErr').style.display='block';document.getElementById('aKey').classList.add('ng');return;}
+    genCodeA(tok,key);
+  }
+  const map={1:'sA0',2:'sA1',3:'sA2',4:'sA3'};
+  show(map[n]);
+}
+
+function genCodeA(tok,key){
+  document.getElementById('aCode').textContent=
+`/**
+ * LINE AI秘書 v3.3 セットアップコード（自動生成）
+ * このコードをGASに全文貼り付けて実行してください
+ */
+function setupLineAI(){
+  var props=PropertiesService.getScriptProperties();
+  props.setProperties({
+    "LINE_CHANNEL_ACCESS_TOKEN":"${tok}",
+    "ANTHROPIC_API_KEY":        "${key}",
+    "LOADER_URL":               "${LOADER_URL}",
+    "MAIN_CODE_DOC_ID":         "${MAIN_DOC_ID}"
+  });
+  Logger.log("✅ セットアップ完了！次は testAllPermissions を実行してください");
+}`;
+}
+
+function vToken(){
+  const v=document.getElementById('aToken').value.trim();
+  const el=document.getElementById('aToken');
+  const ic=document.getElementById('aTokenIco');
+  document.getElementById('aTokenErr').style.display='none';
+  if(v.length>10){el.classList.remove('ng');el.classList.add('ok');ic.textContent='✅';}
+  else{el.classList.remove('ok');ic.textContent='';}
+}
+function vKey(){
+  const v=document.getElementById('aKey').value.trim();
+  const el=document.getElementById('aKey');
+  const ic=document.getElementById('aKeyIco');
+  const wn=document.getElementById('aKeyWrn');
+  document.getElementById('aKeyErr').style.display='none';
+  if(!v){ic.textContent='';return;}
+  if(v.startsWith('sk-ant-')){el.classList.remove('ng');el.classList.add('ok');ic.textContent='✅';wn.style.display='none';}
+  else{el.classList.remove('ok');el.classList.add('ng');ic.textContent='⚠️';wn.style.display='block';}
+}
+function copyA(){
+  navigator.clipboard.writeText(document.getElementById('aCode').textContent).then(()=>{
+    const b=document.getElementById('aCopyBtn');b.textContent='コピー済み ✓';b.classList.add('done');
+    setTimeout(()=>{b.textContent='コピー';b.classList.remove('done');},3000);
+  });
+}
+function copyB(){
+  navigator.clipboard.writeText(LOADER_CODE).then(()=>{
+    const b=document.getElementById('bCopyBtn');b.textContent='コピー済み ✓';b.classList.add('done');
+    setTimeout(()=>{b.textContent='コピー';b.classList.remove('done');},3000);
+  });
+}
+</script>
+</body>
+</html>
