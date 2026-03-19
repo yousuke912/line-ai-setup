@@ -224,17 +224,17 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <p class="card-desc">AIの機能を担う本体コードを最新版に入れ替えます。入力フォームにトークンを貼り付けるとコードが自動生成されます。</p>
     </div>
     <div class="card">
-      <div class="card-title"><span style="background:rgba(245,166,35,.15);color:var(--warn);font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid rgba(245,166,35,.3)">STEP B</span>loader.gsの更新（約3分）</div>
-      <p class="card-desc">GASに最初に貼り付けたファイルです。ここだけ自動更新されないため、今回1回だけ手動で更新します。<strong style="color:var(--text)">これが終われば今後は何もしなくてOKです。</strong></p>
+      <div class="card-title"><span style="background:rgba(6,199,85,.15);color:var(--green);font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid rgba(6,199,85,.3)">自動</span>loader.gsも自動で最新版に更新</div>
+      <p class="card-desc">STEP Aで貼り付けるコードにはloader.gsが統合されています。<strong style="color:var(--text)">STEP Aを完了するだけで全て終わりです。</strong>別途loader.gsを貼り替える作業は不要です。</p>
     </div>
 
     <div class="box box-green" style="margin-top:8px">
-      <div class="box-title">💡 どっちが先？</div>
-      <p>どちらを先にやっても構いません。ただし<strong>STEP A → STEP B の順</strong>が確認しやすくておすすめです。</p>
+      <div class="box-title">💡 作業はSTEP Aだけでです</div>
+      <p>STEP Aを完了するだけで全て終わります。<strong>loader.gsの別途更新は不要です。</strong></p>
     </div>
 
     <button class="btn" onclick="show('sA0')">STEP A から始める →</button>
-    <button class="btn-ghost" onclick="show('sB0')">先に STEP B（loader.gs更新）をやる</button>
+
 
   </div><!-- /s0 -->
 
@@ -308,7 +308,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="step-card">
       <div class="step-num">STEP A-2 // コードが生成されました</div>
       <h2 class="step-h">このコードをコピーしてください</h2>
-      <p class="step-p">あなたのLINEトークンとAPIキーが埋め込まれたGASコードが生成されました。右上の「コピー」ボタンを押してください。</p>
+      <p class="step-p">あなたのLINEトークンとAPIキーが自動で埋め込まれたコードです。<strong style="color:var(--text)">setupLineAIとloader.gsが一体化</strong>されているので、これ1本を貼るだけで全部完結します。右上の「コピー」ボタンを押してください。</p>
       <div class="code-wrap">
         <pre class="code" id="aCode"></pre>
         <button class="copy-btn" id="aCopyBtn" onclick="copyA()">コピー</button>
@@ -363,12 +363,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         <div class="feat"><div class="feat-ic">⚡</div><div class="feat-name">応答速度向上</div><div class="feat-desc">平均2〜4秒に大幅短縮</div></div>
         <div class="feat"><div class="feat-ic">🎨</div><div class="feat-name">21機能カルーセル</div><div class="feat-desc">「ヘルプ」で全機能を確認</div></div>
       </div>
-      <div class="box box-warn">
-        <div class="box-title">⚡ あと1ステップ残っています</div>
-        <p>このまま<strong>STEP B（loader.gs更新）</strong>も済ませてください。約3分で完了します。これで今後の作業は一切不要になります。</p>
+      <div class="box box-green">
+        <div class="box-title">✅ これで全て完了です</div>
+        <p>本体コードとloader.gsが両方最新版に更新されました。<strong>今後の機能追加はすべて自動で反映されます。追加作業は一切不要です。</strong></p>
       </div>
     </div>
-    <button class="btn" onclick="show('sB0')">STEP B（loader.gs更新）へ進む →</button>
     <button class="btn-ghost" onclick="show('s0')">← 最初に戻る</button>
   </div>
 
@@ -566,9 +565,14 @@ function goA(n){
 function genCodeA(tok,key){
   document.getElementById('aCode').textContent=
 `/**
- * LINE AI秘書 v3.3 セットアップコード（自動生成）
- * このコードをGASに全文貼り付けて実行してください
+ * LINE AI秘書 v3.3 アップデートコード（自動生成）
+ * copyright キッシュ
+ *
+ * ▼ このコードをGASに全文貼り付けて保存してください
+ * ▼ 保存後に setupLineAI → testAllPermissions の順で実行してください
  */
+
+// ── セットアップ（1回だけ実行）
 function setupLineAI(){
   var props=PropertiesService.getScriptProperties();
   props.setProperties({
@@ -577,7 +581,59 @@ function setupLineAI(){
     "LOADER_URL":               "${LOADER_URL}",
     "MAIN_CODE_DOC_ID":         "${MAIN_DOC_ID}"
   });
-  Logger.log("✅ セットアップ完了！次は testAllPermissions を実行してください");
+  Logger.log("✅ プロパティ設定完了！次は testAllPermissions を実行してください");
+}
+
+// ── ローダー本体（変更不要）
+function getLoaderUrl(){
+  return PropertiesService.getScriptProperties().getProperty('LOADER_URL')||'';
+}
+function getRemoteCode(){
+  var cache=CacheService.getScriptCache(),cacheKey='remote_code_v1',code=cache.get(cacheKey);
+  if(code){return code;}
+  var loaderUrl=getLoaderUrl();
+  if(!loaderUrl){Logger.log('LOADER_URL が未設定です');return null;}
+  try{
+    var sep=loaderUrl.indexOf('?')===-1?'?':'&';
+    var res=UrlFetchApp.fetch(loaderUrl+sep+'type=code',{muteHttpExceptions:true});
+    var txt=res.getContentText();
+    if(txt.indexOf('system_prompt')!==-1||txt.indexOf('<html')!==-1){
+      var alt=PropertiesService.getScriptProperties().getProperty('LOADER_CODE_URL');
+      if(alt){res=UrlFetchApp.fetch(alt,{muteHttpExceptions:true});txt=res.getContentText();}
+    }
+    if(!txt||txt.indexOf('function')===-1){Logger.log('コード取得失敗: '+txt.slice(0,200));return null;}
+    try{cache.put(cacheKey,txt,3600);Logger.log('コード取得・キャッシュ完了（'+txt.length+'文字）');}
+    catch(ce){Logger.log('キャッシュ容量超過のため毎回取得モードで動作します');}
+    return txt;
+  }catch(e){Logger.log('コード取得エラー: '+e.toString());return null;}
+}
+function loadAndExec(funcName,arg){
+  var code=getRemoteCode();
+  if(!code){return ContentService.createTextOutput('OK');}
+  try{
+    var fn=eval('(function(){\\n'+code+'\\nreturn typeof '+funcName+' !== "undefined" ? '+funcName+' : null;\\n})()');
+    if(typeof fn==='function'){var result=fn(arg);return result!==undefined?result:ContentService.createTextOutput('OK');}
+    Logger.log('関数が見つかりません: '+funcName);
+  }catch(e){
+    Logger.log('実行エラー ['+funcName+']: '+e.toString());
+    try{
+      var cfg=PropertiesService.getScriptProperties(),tok2=cfg.getProperty('LINE_CHANNEL_ACCESS_TOKEN'),uid=cfg.getProperty('LINE_USER_ID');
+      if(tok2&&uid){UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+tok2},payload:JSON.stringify({to:uid,messages:[{type:'text',text:'🔴 エラーが発生しました\\n\\n'+e.toString()+'\\n\\nAPIクレジット残高もご確認ください\\nhttps://console.anthropic.com → Billing'}]}),muteHttpExceptions:true});}
+    }catch(e2){}
+  }
+  return ContentService.createTextOutput('OK');
+}
+function doPost(e){return loadAndExec('doPost',e);}
+function checkReminders(){loadAndExec('checkReminders',null);}
+function morningBriefing(){loadAndExec('morningBriefing',null);}
+function dailyCheck(){loadAndExec('dailyCheck',null);}
+function testAllPermissions(){loadAndExec('testAllPermissions',null);}
+function testSetup(){loadAndExec('testSetup',null);}
+function clearCodeCache(){CacheService.getScriptCache().remove('remote_code_v1');Logger.log('キャッシュをクリアしました');}
+function checkConnection(){
+  var url=getLoaderUrl();if(!url){Logger.log('NG: LOADER_URL未設定');return;}
+  try{var sep=url.indexOf('?')===-1?'?':'&',data=JSON.parse(UrlFetchApp.fetch(url+sep+'type=version',{muteHttpExceptions:true}).getContentText());if(data._status==='ok'){Logger.log('✅ 接続OK / v'+data.version);}else{Logger.log('❌ '+JSON.stringify(data));}}
+  catch(e){Logger.log('❌ 接続エラー: '+e.toString());}
 }`;
 }
 
