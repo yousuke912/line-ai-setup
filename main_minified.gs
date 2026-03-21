@@ -232,7 +232,6 @@ if (remaining <= 3 && remaining > 0) {
 demoWarning = '\n\n---\n⚠️ デモ版：残り' + remaining + '回です';
 }
 }
-if (message === 'グループメモ' || message === 'グループメモ一覧' || message === 'グループタスク' || message === 'グループメモ削除') { return '📋 グループメモ機能は準備中です。'; }
 if (message === 'リセット' || message === 'reset') {
 clearHistory(uid);
 setReplyMode(uid, false);
@@ -1956,7 +1955,7 @@ var presets = {
 if (presets[tone] !== undefined) { return presets[tone]; }
 return '\n・口調: ' + tone;
 }
-function processGroupMention(ev){var config=getConfig();if(!config.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':config.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'次のメッセージを分類しJSONのみ返せ。\n【task】明確な作業依頼\n【reminder】日時・期限が明確\n【memo】記録すべき情報\n【skip】挨拶・雑談・質問・曖昧なもの（迷ったらskip）\nJSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}\nメッセージ:「'+msg+'"'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0){ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);}ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスクに記録しました\n\n・'+(d.v||msg));}else if(d.t==='reminder'){var dt=d.dt?new Date((d.dt.indexOf('+')===-1?d.dt+'+09:00':d.dt)):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0){rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);}rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰ リマインダーに記録しました\n\n・'+(d.v||msg)+'\n'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+parseInt(Utilities.formatDate(dt,'Asia/Tokyo','H'),10)+'時に通知します');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0){ms.appendRow(['ID','日時','タグ','内容']);}ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモに記録しました\n\n・'+(d.v||msg));}}catch(e){}}
+function processGroupMention(ev){var config=getConfig();if(!config.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':config.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'次のメッセージを分類しJSONのみ返せ。\n【task】明確な作業依頼\n【reminder】日時・期限が明確\n【memo】記録すべき情報\n【skip】挨拶・雑談・質問・曖昧なもの（迷ったらskip）\nJSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}\nメッセージ:「'+msg+'」'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0){ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);}ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスクに記録しました\n\n・'+(d.v||msg));}else if(d.t==='reminder'){var dt=d.dt?new Date((d.dt.indexOf('+')===-1?d.dt+'+09:00':d.dt)):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0){rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);}rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰ リマインダーに記録しました\n\n・'+(d.v||msg)+'\n'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+parseInt(Utilities.formatDate(dt,'Asia/Tokyo','H'),10)+'時に通知します');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0){ms.appendRow(['ID','日時','タグ','内容']);}ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモに記録しました\n\n・'+(d.v||msg));}}catch(e){}}
 
 
 function _addTask(t){var s=getDataSheet('タスク');if(s.getLastRow()===0){s.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);}s.appendRow([Date.now()+'',getJSTNow(),'','中',t,'未完了']);}
@@ -2003,7 +2002,7 @@ muteHttpExceptions: true
 });
 } catch(e) { }
 }
-function getCategoryHelp(message){var m={'Gmailヘルプ':'📧 Gmail\n\n「メール確認して」\n「田中さんにメール送って」\n添付はDriveに自動保存','カレンダーヘルプ':'📅 カレンダー\n\n「今日の予定は？」「今週は？」\n「明日14時にMTGを入れて」','ドキュメントヘルプ':'📄 ドキュメント\n\n「議事録を作って」\n「〇〇ドキュメントを読んで」','スプレッドシートヘルプ':'📊 スプレッドシート\n\n「売上管理のスプシを作って」','ドライブヘルプ':'📁 Googleドライブ\n\n「〇〇フォルダを作って」\n「ファイルを探して」','写真保存ヘルプ':'📸 写真保存\n\nLINEで写真を送るとDriveに自動保存','メモヘルプ':'📝 メモ\n\n「〇〇をメモして」\n「メモを見せて」','タスクヘルプ':'✅ タスク\n\n「〇〇をタスクに追加して」\n「タスクを見せて」','レポートヘルプ':'📊 レポート\n\n「今週のレポートを作って」','リマインダーヘルプ':'⏰ リマインダー\n\n「明日9時に〇〇をリマインドして」\n「毎朝9時に〇〇を」（毎日）','誕生日リマインダーヘルプ':'🎂 誕生日リマインダー\n\n「田中さんの誕生日は4月15日」→ 毎年自動リマインド','朝のスケジュール確認ヘルプ':'☀️ 朝のスケジュール確認\n\n「毎朝7時に朝のスケジュール確認をして」','URL要約ヘルプ':'🌐 URL要約\n\nURLを送ると要約します','経路・ホテルヘルプ':'🗺 経路\n「〇〇から〇〇まで電車で」\n🏨 ホテル\n「大阪でホテルを探して」','翻訳ヘルプ':'🌍 翻訳\n\n「〇〇を英語に」','文章校正ヘルプ':'✍️ 文章校正\n\n「この文章を丁寧にして」','AIチャットヘルプ':'💬 AIチャット\n\n「〇〇について教えて」','Web検索ヘルプ':'🔍 Web検索\n\n「〇〇を調べて」','天気ヘルプ':'🌤 天気\n\n「東京の天気は？」','返信作成ヘルプ':'✉️ 返信作成\n\n「返信開始」→ 返信文を作成\n「返信終了」→ 終了','翻訳・文章校正ヘルプ':'🌍/✍️ 「〇〇を英語に」'};return m[message]||null;}
+function getCategoryHelp(message){var m={'Gmailヘルプ':'📧 Gmail\n\n「メール確認して」\n「田中さんにメール送って」\n添付はDriveに自動保存','カレンダーヘルプ':'📅 カレンダー\n\n「今日の予定は？」「今週は？」\n「明日14時にMTGを入れて」','ドキュメントヘルプ':'📄 ドキュメント\n\n「議事録を作って」\n「〇〇ドキュメントを読んで」','スプレッドシートヘルプ':'📊 スプレッドシート\n\n「売上管理のスプシを作って」','ドライブヘルプ':'📁 Googleドライブ\n\n「〇〇フォルダを作って」\n「ファイルを探して」','写真保存ヘルプ':'📸 写真保存\n\nLINEで写真を送るとDriveに自動保存','メモヘルプ':'📝 メモ\n\n「〇〇をメモして」\n「メモを見せて」','タスクヘルプ':'✅ タスク\n\n「〇〇をタスクに追加して」\n「タスクを見せて」','レポートヘルプ':'📊 レポート\n\n「今週のレポートを作って」','リマインダーヘルプ':'⏰ リマインダー\n\n「明日9時に〇〇をリマインドして」\n「毎朝9時に〇〇を」（毎日）','誕生日リマインダーヘルプ':'🎂 誕生日リマインダー\n\n「田中さんの誕生日は4月15日」→ 毎年自動リマインド','朝のスケジュール確認ヘルプ':'☀️ 朝のスケジュール確認\n\n「毎朝7時に朝のスケジュール確認をして」','URL要約ヘルプ':'🌐 URL要約\n\nURLを送ると要約します','経路・ホテルヘルプ':'🗺 経路\n「〇〇から〇〇まで電車で」\n🏨 ホテル\n「大阪でホテルを探して」','翻訳ヘルプ':'🌍 翻訳\n\n「〇〇を英語に」','文章校正ヘルプ':'✍️ 文章校正\n\n「この文章を丁寧にして」','AIチャットヘルプ':'💬 AIチャット\n\n「〇〇について教えて」','Web検索ヘルプ':'🔍 Web検索\n\n「〇〇を調べて」','天気ヘルプ':'🌤 天気\n\n「東京の天気は？」','返信作成ヘルプ':'✉️ 返信作成\n\n「返信開始」→ 返信文を作成\n「返信終了」→ 終了','翻訳・文章校正ヘルプ':'🌍/✍️ 「〇〇を英語に」','口調変更ヘルプ':'🗣 口調変更\n\n「口調変更」と送ると選択肢が出ます\n\n1. 丁寧（デフォルト）\n2. フレンドリー\n3. ビジネス\n4. カスタム（例:「カスタム:関西弁で」）','コスト管理ヘルプ':'💰 APIコスト管理\n\n「残高確認」で今月の使用量を確認\n\n・¥500到達時に自動通知\n・¥1000到達時に自動通知\n・月が変わると自動リセット'};return m[message]||null;}
 
 function helpText() {
 return '【LINE AI秘書 機能一覧】\n\n' +
@@ -2098,6 +2097,15 @@ actions: [
 { type:'message', label:'🔍 Web検索', text:'Web検索ヘルプ' },
 { type:'message', label:'🌤 天気', text:'天気ヘルプ' },
 { type:'message', label:'✉️ 返信作成モード', text:'返信作成ヘルプ' }
+]
+},
+{
+title: 'カスタマイズ',
+text: '口調・コスト管理',
+actions: [
+{ type:'message', label:'🗣 口調変更', text:'口調変更ヘルプ' },
+{ type:'message', label:'💰 コスト確認', text:'コスト管理ヘルプ' },
+{ type:'message', label:'❓ その他の使い方', text:'ヘルプ' }
 ]
 }
 ]
@@ -2283,7 +2291,7 @@ msg += issues.join('\n\n');
 pushToLine(config.USER_ID, msg);
 }
 function getCategoryHelpMap() {
-return {'Gmailヘルプ':1,'カレンダーヘルプ':1,'ドキュメントヘルプ':1,'スプレッドシートヘルプ':1,'ドライブヘルプ':1,'写真保存ヘルプ':1,'メモヘルプ':1,'タスクヘルプ':1,'レポートヘルプ':1,'リマインダーヘルプ':1,'誕生日リマインダーヘルプ':1,'朝のスケジュール確認ヘルプ':1,'URL要約ヘルプ':1,'経路・ホテルヘルプ':1,'翻訳ヘルプ':1,'文章校正ヘルプ':1,'AIチャットヘルプ':1,'Web検索ヘルプ':1,'天気ヘルプ':1,'返信作成ヘルプ':1,'翻訳・文章校正ヘルプ':1};
+return {'Gmailヘルプ':1,'カレンダーヘルプ':1,'ドキュメントヘルプ':1,'スプレッドシートヘルプ':1,'ドライブヘルプ':1,'写真保存ヘルプ':1,'メモヘルプ':1,'タスクヘルプ':1,'レポートヘルプ':1,'リマインダーヘルプ':1,'誕生日リマインダーヘルプ':1,'朝のスケジュール確認ヘルプ':1,'URL要約ヘルプ':1,'経路・ホテルヘルプ':1,'翻訳ヘルプ':1,'文章校正ヘルプ':1,'AIチャットヘルプ':1,'Web検索ヘルプ':1,'天気ヘルプ':1,'返信作成ヘルプ':1,'翻訳・文章校正ヘルプ':1,'口調変更ヘルプ':1,'コスト管理ヘルプ':1};
 }
 function setupDailyCheckTrigger() {
 var triggers = ScriptApp.getProjectTriggers();
