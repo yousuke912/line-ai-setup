@@ -882,6 +882,16 @@ cache_control: { type:'ephemeral' }
 name:'company_view',
 description:'部署一覧または指定部署のメモ一覧を表示',
 input_schema:{type:'object',properties:{department:{type:'string',description:'部署名（省略で全部署一覧）'}},required:[]}
+},
+{
+name:'memo_to_task',
+description:'指定番号のメモをタスクに変換する',
+input_schema:{type:'object',properties:{memo_number:{type:'number',description:'メモ番号'}},required:['memo_number']}
+},
+{
+name:'dept_report',
+description:'指定部署の蓄積メモからレポートを生成する',
+input_schema:{type:'object',properties:{department:{type:'string',description:'部署名'},period:{type:'string',description:'期間（今週/今月）'}},required:['department']}
 }
 ];
 }
@@ -897,7 +907,7 @@ drive: ['drive_folder_create','drive_file_list','drive_file_delete','drive_file_
 memo: ['memo_add','memo_view','memo_delete'],
 task: ['task_add','task_view','task_done','task_delete'],
 reminder: ['reminder_add','reminder_view','reminder_delete','birthday_reminder'],
-company: ['company_view'],
+company: ['company_view','memo_to_task','dept_report'],
 briefing: ['briefing_setting'],
 search: ['web_search'],
 weather: ['weather'],
@@ -915,7 +925,7 @@ drive: ['ドライブ','フォルダ','ファイル','移動','削除','検索',
 memo: ['メモ','覚え','記録','削除','消して','消す'],
 task: ['タスク','やること','todo','完了','締め切り','削除','消して','消す'],
 reminder: ['リマインダー','通知','リマインド','誕生日','毎日','毎週','毎月','毎年','第','削除','消して','消す'],
-company: ['部署','事業','会社','部門','カンパニー'],
+company: ['部署','事業','会社','部門','カンパニー','レポート','まとめ','変換'],
 briefing: ['ブリーフィング','朝のスケジュール','朝の予定'],
 search: ['調べ','検索','最新','ニュース','情報'],
 weather: ['天気','気温','雨','晴れ','曇り','予報'],
@@ -953,7 +963,7 @@ drive: ['drive_folder_create','drive_file_list','drive_file_delete','drive_file_
 memo: ['memo_add','memo_view','memo_delete'],
 task: ['task_add','task_view','task_done','task_delete'],
 reminder: ['reminder_add','reminder_view','reminder_delete','birthday_reminder'],
-company: ['company_view'],
+company: ['company_view','memo_to_task','dept_report'],
 briefing: ['briefing_setting'],
 search: ['web_search'],
 weather: ['weather'],
@@ -1011,6 +1021,8 @@ if (name === 'sheets_delete') { return toolSheetsDelete(input); }
 if (name === 'url_summarize') { return toolUrlSummarize(input); }
 if (name === 'birthday_reminder') { return toolBirthdayReminder(input); }
 if (name === 'report_generate') { return toolReportGenerate(input); }
+if (name === 'memo_to_task') { return toolMemoToTask(input); }
+if (name === 'dept_report') { return toolDeptReport(input); }
 return 'この機能は現在ご利用いただけません';
 } catch (err) {
 try { var _c=getConfig(); if(_c.LINE_TOKEN){ pushToLine('U029395d561dbfe988aceae03cbf6affc','⚠️ ツールエラー: '+name+'\n'+err.toString().substring(0,200)); } } catch(e3){}
@@ -1249,20 +1261,9 @@ var sheet = getDataSheet('メモ');
 if (sheet.getLastRow() === 0) { sheet.appendRow(['ID', '日時', 'タグ', '内容']); }
 var id = new Date().getTime().toString();
 var tag = input.tag || '';
-// キッシュさんのみ：タグ未指定なら部署自動分類
 if (!tag && input._uid === KISH_UID) {
-try {
 var c = getConfig();
-if (c.ANTHROPIC_KEY) {
-var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-method:'post', contentType:'application/json',
-headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},
-payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:15,
-messages:[{role:'user',content:'分類:'+DEPTS.join(',')+'\nメモ:'+input.content+'\nカテゴリ名のみ'}]}),
-muteHttpExceptions:true}).getContentText();
-if (r && r.charAt(0) !== '<') { tag = JSON.parse(r).content[0].text.trim(); }
-}
-} catch(e) {}
+if (c.ANTHROPIC_KEY) { tag = _haikuAsk(c.ANTHROPIC_KEY,'分類:'+DEPTS.join(',')+'\nメモ:'+input.content+'\nカテゴリ名のみ'); }
 }
 sheet.appendRow([id, getJSTNow(), tag, input.content]);
 return '保存完了: ' + input.content + (tag ? ' [' + tag + ']' : '');
@@ -1826,10 +1827,69 @@ var text = html
 .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
 .replace(/\s+/g,' ').trim();
 if (text.length > 1000) { text = text.slice(0, 1000); }
+// キッシュさんのみ：URL要約をメモに自動保存
+if (input._uid === KISH_UID) {
+try {
+var ms = getDataSheet('メモ');
+if (ms.getLastRow() === 0) { ms.appendRow(['ID', '日時', 'タグ', '内容']); }
+var c2 = getConfig();
+var utag = c2.ANTHROPIC_KEY ? _haikuAsk(c2.ANTHROPIC_KEY,'分類:'+DEPTS.join(',')+'\nURL:'+input.url+'\n内容:'+text.slice(0,200)+'\nカテゴリ名のみ') : 'その他';
+ms.appendRow([Date.now()+'', getJSTNow(), utag||'その他', 'URL要約: '+input.url]);
+} catch(e) {}
+}
 return '以下のWebページの内容を200字以内で日本語で要約してください。\nURL: ' + input.url + '\n\n' + text;
 } catch(e) {
 return 'URLの取得に失敗しました。URLを確認してください。';
 }
+}
+function toolMemoToTask(input) {
+if (input._uid !== KISH_UID) { return 'この機能は未設定です'; }
+var sheet = getDataSheet('メモ');
+if (sheet.getLastRow() <= 1) { return 'メモがありません'; }
+var data = sheet.getDataRange().getValues();
+var all = [];
+for (var j = 1; j < data.length; j++) { if (data[j][3] && String(data[j][2]) !== 'DELETED') { all.push(j); } }
+var num = input.memo_number;
+if (!num || num < 1 || num > all.length) { return 'メモ番号が正しくありません。メモ一覧で番号を確認してください'; }
+var ri = all[num - 1];
+var content = data[ri][3];
+var ts = getDataSheet('タスク');
+if (ts.getLastRow() === 0) { ts.appendRow(['ID', '追加日時', '期限', '優先度', 'タスク', '状態']); }
+ts.appendRow([Date.now() + '', getJSTNow(), '', '中', content, '未完了']);
+sheet.getRange(ri + 1, 3).setValue('DELETED');
+return 'メモをタスクに変換しました✅\nタスク: ' + content;
+}
+function toolDeptReport(input) {
+if (input._uid !== KISH_UID) { return 'この機能は未設定です'; }
+var dept = input.department;
+if (!dept) { return '部署名を指定してください'; }
+var items = [];
+// スプシメモから該当部署のメモを収集
+try {
+var ms = getDataSheet('メモ');
+if (ms.getLastRow() > 1) {
+var md = ms.getDataRange().getValues();
+for (var i = 1; i < md.length; i++) {
+if (String(md[i][2]) === dept && md[i][3] && String(md[i][2]) !== 'DELETED') {
+items.push(md[i][1] + ': ' + md[i][3]);
+}
+}
+}
+} catch(e) {}
+// Driveファイルからも収集
+try {
+var root = DriveApp.getFolderById(MY_CO_FOLDER);
+var it = root.getFoldersByName(dept);
+if (it.hasNext()) {
+var files = it.next().getFiles();
+while (files.hasNext() && items.length < 20) {
+var f = files.next();
+items.push(Utilities.formatDate(f.getDateCreated(), 'Asia/Tokyo', 'M/d') + ': ' + f.getName());
+}
+}
+} catch(e) {}
+if (items.length === 0) { return dept + 'にはまだデータがありません'; }
+return '以下の' + dept + 'の蓄積データ(' + items.length + '件)から、要点をまとめたレポートを作成してください:\n\n' + items.join('\n');
 }
 function toolBirthdayReminder(input) {
 if (!input.birthday || !input.name) { return '名前と誕生日（MM-DD形式）を指定してください。例: 03-25'; }
@@ -2124,6 +2184,7 @@ return (props || PropertiesService.getScriptProperties()).getProperty('tone_' + 
 function setTone(uid, tone, props) {
 (props || PropertiesService.getScriptProperties()).setProperty('tone_' + uid, tone);
 }
+function _haikuAsk(key,prompt,maxTok){try{var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':key,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:maxTok||15,messages:[{role:'user',content:prompt}]}),muteHttpExceptions:true}).getContentText();if(!r||r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}catch(e){return'';}}
 function getTonePrompt(uid, props) {
 var tone = getTone(uid, props);
 if (!tone) { return ''; }
@@ -2142,7 +2203,7 @@ function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;va
 
 
 function _getDeptFolder(cat){try{var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(cat);if(it.hasNext())return it.next();return root.createFolder(cat);}catch(e){return null;}}
-function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;var _df=_getDeptFolder(cat);if(!_df)return;_df.createFile(cat+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;try{if(_haikuAsk(c.ANTHROPIC_KEY,'アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=_haikuAsk(c.ANTHROPIC_KEY,'分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ');if(!cat)return;var _df=_getDeptFolder(cat);if(!_df)return;_df.createFile(cat+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
 function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';
 var dept=String(input.department||'').trim();
 // メモシートから部署タグ付きメモを集計
