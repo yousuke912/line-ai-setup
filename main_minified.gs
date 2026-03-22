@@ -53,14 +53,14 @@ _status: 'default'
 };
 }
 function getJSTNow() {
-return Utilities.formatDate(new Date(), TZ, 'yyyy年M月d日（E） HH:mm');
+return Utilities.formatDate(new Date(), 'Asia/Tokyo','yyyy年M月d日（E） HH:mm');
 }
 function fmtDate(d, fmt) {
-return Utilities.formatDate(new Date(d), TZ, fmt);
+return Utilities.formatDate(new Date(d), 'Asia/Tokyo',fmt);
 }
 function getJSTDate(offsetDays) {
 offsetDays = offsetDays || 0;
-var str = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+var str = Utilities.formatDate(new Date(), 'Asia/Tokyo','yyyy-MM-dd');
 var y = parseInt(str.substring(0, 4));
 var m = parseInt(str.substring(5, 7)) - 1;
 var d = parseInt(str.substring(8, 10));
@@ -159,7 +159,7 @@ headers: { Authorization: 'Bearer ' + cfg2.LINE_TOKEN },
 muteHttpExceptions: true
 });
 var blob = imgRes.getBlob();
-var fname = '📸 ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd_HH-mm-ss') + '.jpg';
+var fname = '📸 ' + Utilities.formatDate(new Date(), 'Asia/Tokyo','yyyy-MM-dd_HH-mm-ss') + '.jpg';
 var file = DriveApp.createFile(blob.setName(fname));
 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 replyToLine(ev.replyToken, '📸 Driveに保存しました！\n' + fname + '\n' + file.getUrl());
@@ -1138,7 +1138,7 @@ return '「' + input.keyword + '」に該当する予定が見つかりません
 }
 if (matched.length > 1 && input.time_hint) {
 var hour = parseInt(input.time_hint, 10);
-var filtered = matched.filter(function(ev) { return parseInt(Utilities.formatDate(ev.getStartTime(), TZ, 'H'), 10) === hour; });
+var filtered = matched.filter(function(ev) { return parseInt(Utilities.formatDate(ev.getStartTime(), 'Asia/Tokyo','H'), 10) === hour; });
 if (filtered.length > 0) { matched = filtered; }
 }
 if (matched.length > 1) {
@@ -1314,7 +1314,7 @@ if (isNaN(epochMs)) { epochMs = new Date(input.datetime).getTime(); }
 if (isNaN(epochMs)) { return '❌ 日時の形式が正しくありません: ' + input.datetime + '\n例: 2025-12-25T09:00 または 2025-12-25'; }
 if (isNaN(epochMs)) { epochMs = new Date(input.datetime).getTime(); }
 sheet.appendRow([id, getJSTNow(), epochMs, input.content, 'FALSE', repeat]);
-var dtStr = Utilities.formatDate(new Date(epochMs), TZ, 'M月d日(E) HH:mm');
+var dtStr = Utilities.formatDate(new Date(epochMs), 'Asia/Tokyo','M月d日(E) HH:mm');
 var repeatLabel = { 'none':'1回のみ', 'daily':'毎日', 'weekly':'毎週', 'monthly':'毎月' };
 var repeatDisp = repeatLabel[repeat] || getMonthlyWeekdayLabel(repeat) || '1回のみ';
 return '設定完了: ' + input.content + ' / ' + dtStr + 'に通知 / ' + repeatDisp;
@@ -1336,8 +1336,8 @@ var firstDow = next.getDay();
 var diff = (weekday - firstDow + 7) % 7;
 var targetDate = 1 + diff + (nth - 1) * 7;
 next.setDate(targetDate);
-var timePart = Utilities.formatDate(baseDate, TZ, 'HH:mm:ss');
-var datePart = Utilities.formatDate(next, TZ, 'yyyy-MM-dd');
+var timePart = Utilities.formatDate(baseDate, 'Asia/Tokyo','HH:mm:ss');
+var datePart = Utilities.formatDate(next, 'Asia/Tokyo','yyyy-MM-dd');
 next = new Date(datePart + 'T' + timePart + '+09:00');
 return next;
 }
@@ -1359,7 +1359,7 @@ var sRV = String(rawDtRV || '').trim();
 if (/^\d{13}$/.test(sRV)) { dtObjRV = new Date(parseInt(sRV)); }
 else { if (sRV.indexOf('+') === -1 && sRV.indexOf('Z') === -1) { sRV += '+09:00'; } dtObjRV = new Date(sRV); }
 }
-var dtStr = dtObjRV ? Utilities.formatDate(dtObjRV, TZ, 'M/d(E) HH:mm') : '不明';
+var dtStr = dtObjRV ? Utilities.formatDate(dtObjRV, 'Asia/Tokyo','M/d(E) HH:mm') : '不明';
 var repeatDisp = { 'daily':'毎日', 'weekly':'毎週', 'monthly':'毎月' };
 var repVal = data[i][5] ? String(data[i][5]) : '';
 var rep = repeatDisp[repVal] || getMonthlyWeekdayLabel(repVal) || '';
@@ -1443,7 +1443,7 @@ if (!stillExists) {
 
 continue;
 }
-var remindTimeStr = Utilities.formatDate(remindAt, TZ, 'M月d日(E) HH:mm');
+var remindTimeStr = Utilities.formatDate(remindAt, 'Asia/Tokyo','M月d日(E) HH:mm');
 pushToLine(config.USER_ID, '⏰ リマインダー\n' + remindTimeStr + '\n\n' + data[i][3]);
 var repeat = data[i][5] || 'none';
 if (repeat === 'none') {
@@ -1454,7 +1454,7 @@ if (repeat === 'daily') { nextDate.setDate(nextDate.getDate() + 1); }
 if (repeat === 'weekly') { nextDate.setDate(nextDate.getDate() + 7); }
 if (repeat === 'monthly') { nextDate.setMonth(nextDate.getMonth() + 1); }
 if (repeat === 'yearly') {
-var _curJstStr = Utilities.formatDate(remindAt, TZ, "yyyy-MM-dd'T'HH:mm:ss'+09:00'");
+var _curJstStr = Utilities.formatDate(remindAt, 'Asia/Tokyo',"yyyy-MM-dd'T'HH:mm:ss'+09:00'");
 var _nextYear = (parseInt(_curJstStr.slice(0, 4), 10) + 1).toString();
 nextDate = new Date(_nextYear + _curJstStr.slice(4));
 }
@@ -1829,7 +1829,7 @@ var nextBirthday = new Date(year, month - 1, day, hour, 0, 0);
 if (nextBirthday < new Date()) {
 nextBirthday = new Date(year + 1, month - 1, day, hour, 0, 0);
 }
-var datetimeStr = Utilities.formatDate(nextBirthday, TZ, "yyyy-MM-dd'T'HH:mm:ss") + '+09:00';
+var datetimeStr = Utilities.formatDate(nextBirthday, 'Asia/Tokyo',"yyyy-MM-dd'T'HH:mm:ss") + '+09:00';
 var content = input.name + 'さんの誕生日🎂';
 var id = new Date().getTime().toString();
 sheet.appendRow([id, getJSTNow(), datetimeStr, content, 'FALSE', 'yearly']);
@@ -1953,12 +1953,12 @@ var remoteConfig = getRemoteConfig();
 var briefingOn = remoteConfig.briefing_enabled !== 'FALSE';
 if (!briefingOn) { return; }
 var now = new Date();
-var hour = parseInt(Utilities.formatDate(now, TZ, 'HH'), 10);
+var hour = parseInt(Utilities.formatDate(now, 'Asia/Tokyo','HH'), 10);
 var greeting = hour < 12 ? 'おはようございます！☀️' : hour < 18 ? 'こんにちは！🌤' : 'こんばんは！🌙';
 var lines = [greeting, fmtDate(now, 'M月d日（E）') + 'のブリーフィングです。', ''];
 try {
 var today = getJSTDate(0);
-var dateStr = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+var dateStr = Utilities.formatDate(new Date(), 'Asia/Tokyo','yyyy-MM-dd');
 var start = new Date(dateStr + 'T00:00:00+09:00');
 var end = new Date(dateStr + 'T23:59:59+09:00');
 var events = [];
@@ -2073,7 +2073,7 @@ muteHttpExceptions: true
 }
 function trackTokenUsage(inputTokens, outputTokens, props) {
 var now = new Date();
-var key = 'tokens_' + Utilities.formatDate(now, TZ, 'yyyy_M');
+var key = 'tokens_' + Utilities.formatDate(now, 'Asia/Tokyo','yyyy_M');
 var s = props.getProperty(key);
 var data = s ? JSON.parse(s) : { input:0, output:0, w5:false, w10:false };
 data.input += (inputTokens || 0);
@@ -2087,13 +2087,13 @@ return { cost: Math.round(cost), newWarn: newWarn };
 }
 function getMonthlyUsageText(props) {
 var now = new Date();
-var key = 'tokens_' + Utilities.formatDate(now, TZ, 'yyyy_M');
+var key = 'tokens_' + Utilities.formatDate(now, 'Asia/Tokyo','yyyy_M');
 var d = props.getProperty(key);
 if (!d) { return '今月の使用記録はまだありません。'; }
 var data = JSON.parse(d);
 var cost = Math.round((data.input / 1000000 * 3 + data.output / 1000000 * 15) * 150);
 var mn = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-var monthIdx = parseInt(Utilities.formatDate(now, TZ, 'M'), 10) - 1;
+var monthIdx = parseInt(Utilities.formatDate(now, 'Asia/Tokyo','M'), 10) - 1;
 return mn[monthIdx] + 'の使用量（概算）\n入力: ' + data.input + ' tok\n出力: ' + data.output + ' tok\n推定: 約¥' + cost + '\n\n⚠️ あくまで目安です。正確な残高👇\nhttps://console.anthropic.com/settings/billing';
 }
 function getTone(uid, props) {
@@ -2329,7 +2329,7 @@ var countKey = 'demo_count_' + (cfg.USER_ID || '');
 var count = parseInt(PropertiesService.getScriptProperties().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 var myEmail = Session.getActiveUser().getEmail();
-var today = Utilities.formatDate(new Date(), TZ, 'M月d日');
+var today = Utilities.formatDate(new Date(), 'Asia/Tokyo','M月d日');
 var emails = [
 {
 subject: '【' + today + '】株式会社田中商事 田中様より',
