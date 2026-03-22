@@ -27,9 +27,11 @@ var config = JSON.parse(res.getContentText());
 if (config._status === 'ok') {
 SCRIPT_CACHE.put(REMOTE_CONFIG_CACHE_KEY, JSON.stringify(config), REMOTE_CONFIG_TTL);
 
+
 return config;
 }
 } catch(e) {
+
 
 }
 return getDefaultConfig();
@@ -48,14 +50,14 @@ _status: 'default'
 };
 }
 function getJSTNow() {
-return fmtDate(new Date(), 'yyyy年M月d日（E） HH:mm');
+return Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy年M月d日（E） HH:mm');
 }
 function fmtDate(d, fmt) {
 return Utilities.formatDate(new Date(d), 'Asia/Tokyo', fmt);
 }
 function getJSTDate(offsetDays) {
 offsetDays = offsetDays || 0;
-var str = fmtDate(new Date(), 'yyyy-MM-dd');
+var str = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
 var y = parseInt(str.substring(0, 4));
 var m = parseInt(str.substring(5, 7)) - 1;
 var d = parseInt(str.substring(8, 10));
@@ -154,7 +156,7 @@ headers: { Authorization: 'Bearer ' + cfg2.LINE_TOKEN },
 muteHttpExceptions: true
 });
 var blob = imgRes.getBlob();
-var fname = '📸 ' + fmtDate(new Date(), 'yyyy-MM-dd_HH-mm-ss') + '.jpg';
+var fname = '📸 ' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd_HH-mm-ss') + '.jpg';
 var file = DriveApp.createFile(blob.setName(fname));
 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 replyToLine(ev.replyToken, '📸 Driveに保存しました！\n' + fname + '\n' + file.getUrl());
@@ -176,6 +178,7 @@ var reply = processMessage(uid, message);
 if (reply) { replyToLine(ev.replyToken, reply); }
 }
 } catch (err) {
+
 
 try {
 var cfg = getConfig();
@@ -226,6 +229,7 @@ return 'デモ版は10回までです。\n\nご購入はこちら👇\nhttps://o
 try {
 props.setProperty(countKey, String(count + 1));
 } catch(e) {
+
 
 }
 var remaining = 10 - (count + 1);
@@ -315,7 +319,7 @@ finalReply =
 '① https://console.anthropic.com を開く\n' +
 '② 左メニュー「Billing」をクリック\n' +
 '③「Add credit」でクレジットカードからチャージ\n' +
-'　（$5〜$10程度がおすすめ）\n\n' +
+' （$5〜$10程度がおすすめ）\n\n' +
 'チャージ後はすぐにご利用いただけます。';
 break;
 }
@@ -463,6 +467,7 @@ return null;
 return result;
 } catch (err) {
 
+
 return null;
 }
 }
@@ -537,13 +542,13 @@ memo: ['メモ','覚え','記録'],
 task: ['タスク','やること','todo','完了','締め切り'],
 reminder: ['リマインダー','通知','リマインド','誕生日','毎日','毎週','毎月','毎年','第'],
 briefing: ['ブリーフィング','朝のスケジュール','朝の予定'],
-tone: ['口調','トーン','しゃべり','話し方','可愛','かわい','カワイ','タメ口','ため口','敬語','フレンドリー','ビジネス口調','キャラ','喋り方'],
 search: ['調べ','検索','最新','ニュース','情報'],
 weather: ['天気','気温','雨','晴れ','曇り','予報'],
 route: ['経路','乗換','バス','電車','ホテル','宿','行き方'],
 url: ['http','https','url','要約','まとめ'],
 photo: ['写真','画像','フォト'],
 report: ['レポート','週次','月次'],
+tone: ['口調','トーン','しゃべり','話し方','可愛','かわい','カワイ','タメ口','ため口','敬語','フレンドリー','ビジネス口調','キャラ','喋り方'],
 company: ['部署','カンパニー','事業','秘書室','line事業','投稿案','ネタ','介護ブログ','学校コンサル','hp運用']
 };
 var needed = {};
@@ -578,7 +583,6 @@ for (var i = 0; i < list.length; i++) { result[list[i]] = true; }
 return result;
 }
 function executeTool(name, input, uid) {
-
 try {
 if (name === 'set_tone') { return toolSetTone(input, uid); }
 if (name === 'company') { return toolCompany(input, uid); }
@@ -621,6 +625,7 @@ if (name === 'birthday_reminder') { return toolBirthdayReminder(input); }
 if (name === 'report_generate') { return toolReportGenerate(input); }
 return 'ツール「' + name + '」が見つかりません';
 } catch (err) {
+
 
 return 'ツールの実行中にエラーが発生しました。もう一度お試しください。';
 }
@@ -748,7 +753,7 @@ return '「' + input.keyword + '」に該当する予定が見つかりません
 }
 if (matched.length > 1 && input.time_hint) {
 var hour = parseInt(input.time_hint, 10);
-var filtered = matched.filter(function(ev) { return parseInt(fmtDate(ev.getStartTime(), 'H'), 10) === hour; });
+var filtered = matched.filter(function(ev) { return parseInt(Utilities.formatDate(ev.getStartTime(), 'Asia/Tokyo', 'H'), 10) === hour; });
 if (filtered.length > 0) { matched = filtered; }
 }
 if (matched.length > 1) {
@@ -906,7 +911,7 @@ if (isNaN(epochMs)) { epochMs = new Date(input.datetime).getTime(); }
 if (isNaN(epochMs)) { return '❌ 日時の形式が正しくありません: ' + input.datetime + '\n例: 2025-12-25T09:00 または 2025-12-25'; }
 if (isNaN(epochMs)) { epochMs = new Date(input.datetime).getTime(); }
 sheet.appendRow([id, getJSTNow(), epochMs, input.content, 'FALSE', repeat]);
-var dtStr = fmtDate(new Date(epochMs), 'M月d日(E) HH:mm');
+var dtStr = Utilities.formatDate(new Date(epochMs), 'Asia/Tokyo', 'M月d日(E) HH:mm');
 var repeatLabel = { 'none':'1回のみ', 'daily':'毎日', 'weekly':'毎週', 'monthly':'毎月' };
 var repeatDisp = repeatLabel[repeat] || getMonthlyWeekdayLabel(repeat) || '1回のみ';
 return '設定完了: ' + input.content + ' / ' + dtStr + 'に通知 / ' + repeatDisp;
@@ -928,8 +933,8 @@ var firstDow = next.getDay();
 var diff = (weekday - firstDow + 7) % 7;
 var targetDate = 1 + diff + (nth - 1) * 7;
 next.setDate(targetDate);
-var timePart = fmtDate(baseDate, 'HH:mm:ss');
-var datePart = fmtDate(next, 'yyyy-MM-dd');
+var timePart = Utilities.formatDate(baseDate, 'Asia/Tokyo', 'HH:mm:ss');
+var datePart = Utilities.formatDate(next, 'Asia/Tokyo', 'yyyy-MM-dd');
 next = new Date(datePart + 'T' + timePart + '+09:00');
 return next;
 }
@@ -951,7 +956,7 @@ var sRV = String(rawDtRV || '').trim();
 if (/^\d{13}$/.test(sRV)) { dtObjRV = new Date(parseInt(sRV)); }
 else { if (sRV.indexOf('+') === -1 && sRV.indexOf('Z') === -1) { sRV += '+09:00'; } dtObjRV = new Date(sRV); }
 }
-var dtStr = dtObjRV ? fmtDate(dtObjRV, 'M/d(E) HH:mm') : '不明';
+var dtStr = dtObjRV ? Utilities.formatDate(dtObjRV, 'Asia/Tokyo', 'M/d(E) HH:mm') : '不明';
 var repeatDisp = { 'daily':'毎日', 'weekly':'毎週', 'monthly':'毎月' };
 var repVal = data[i][5] ? String(data[i][5]) : '';
 var rep = repeatDisp[repVal] || getMonthlyWeekdayLabel(repVal) || '';
@@ -1015,9 +1020,10 @@ break;
 }
 if (!stillExists) {
 
+
 continue;
 }
-var remindTimeStr = fmtDate(remindAt, 'M月d日(E) HH:mm');
+var remindTimeStr = Utilities.formatDate(remindAt, 'Asia/Tokyo', 'M月d日(E) HH:mm');
 pushToLine(config.USER_ID, '⏰ リマインダー\n' + remindTimeStr + '\n\n' + data[i][3]);
 var repeat = data[i][5] || 'none';
 if (repeat === 'none') {
@@ -1028,7 +1034,7 @@ if (repeat === 'daily') { nextDate.setDate(nextDate.getDate() + 1); }
 if (repeat === 'weekly') { nextDate.setDate(nextDate.getDate() + 7); }
 if (repeat === 'monthly') { nextDate.setMonth(nextDate.getMonth() + 1); }
 if (repeat === 'yearly') {
-var _curJstStr = fmtDate(remindAt, "yyyy-MM-dd'T'HH:mm:ss'+09:00'");
+var _curJstStr = Utilities.formatDate(remindAt, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss'+09:00'");
 var _nextYear = (parseInt(_curJstStr.slice(0, 4), 10) + 1).toString();
 nextDate = new Date(_nextYear + _curJstStr.slice(4));
 }
@@ -1041,6 +1047,7 @@ nextDate = getNextMonthlyWeekday(remindAt, nth, weekday);
 var nextEpoch = nextDate.getTime();
 sheet.getRange(i+1, 3).setValue(nextEpoch);
 sheet.getRange(i+1, 5).setValue('FALSE');
+
 
 }
 }
@@ -1365,7 +1372,7 @@ var nextBirthday = new Date(year, month - 1, day, hour, 0, 0);
 if (nextBirthday < new Date()) {
 nextBirthday = new Date(year + 1, month - 1, day, hour, 0, 0);
 }
-var datetimeStr = fmtDate(nextBirthday, "yyyy-MM-dd'T'HH:mm:ss") + '+09:00';
+var datetimeStr = Utilities.formatDate(nextBirthday, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss") + '+09:00';
 var content = input.name + 'さんの誕生日🎂';
 var id = new Date().getTime().toString();
 sheet.appendRow([id, getJSTNow(), datetimeStr, content, 'FALSE', 'yearly']);
@@ -1378,10 +1385,10 @@ var title, dateLabel;
 if (type === 'weekly') {
 var weekStart = new Date(now);
 weekStart.setDate(now.getDate() - now.getDay());
-title = fmtDate(weekStart, 'yyyy年M月d日') + '週　週次レポート';
+title = fmtDate(weekStart, 'yyyy年M月d日') + '週 週次レポート';
 dateLabel = fmtDate(weekStart, 'M/d') + '〜' + fmtDate(now, 'M/d');
 } else {
-title = fmtDate(now, 'yyyy年M月') + '　月次レポート';
+title = fmtDate(now, 'yyyy年M月') + ' 月次レポート';
 dateLabel = fmtDate(now, 'yyyy年M月');
 }
 var lines = ['# ' + title, '期間: ' + dateLabel, ''];
@@ -1489,12 +1496,12 @@ var remoteConfig = getRemoteConfig();
 var briefingOn = remoteConfig.briefing_enabled !== 'FALSE';
 if (!briefingOn) { return; }
 var now = new Date();
-var hour = parseInt(fmtDate(now, 'HH'), 10);
+var hour = parseInt(Utilities.formatDate(now, 'Asia/Tokyo', 'HH'), 10);
 var greeting = hour < 12 ? 'おはようございます！☀️' : hour < 18 ? 'こんにちは！🌤' : 'こんばんは！🌙';
 var lines = [greeting, fmtDate(now, 'M月d日（E）') + 'のブリーフィングです。', ''];
 try {
 var today = getJSTDate(0);
-var dateStr = fmtDate(new Date(), 'yyyy-MM-dd');
+var dateStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
 var start = new Date(dateStr + 'T00:00:00+09:00');
 var end = new Date(dateStr + 'T23:59:59+09:00');
 var events = [];
@@ -1543,6 +1550,7 @@ lines.push('✅ タスクはまだありません');
 lines.push('');
 lines.push('今日も頑張りましょう💪');
 pushToLine(config.USER_ID, lines.join('\n'));
+
 
 }
 function setupBriefingTrigger() {
@@ -1608,7 +1616,7 @@ muteHttpExceptions: true
 }
 function trackTokenUsage(inputTokens, outputTokens, props) {
 var now = new Date();
-var key = 'tokens_' + fmtDate(now, 'yyyy_M');
+var key = 'tokens_' + Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy_M');
 var s = props.getProperty(key);
 var data = s ? JSON.parse(s) : { input:0, output:0, w5:false, w10:false };
 data.input += (inputTokens || 0);
@@ -1622,13 +1630,13 @@ return { cost: Math.round(cost), newWarn: newWarn };
 }
 function getMonthlyUsageText(props) {
 var now = new Date();
-var key = 'tokens_' + fmtDate(now, 'yyyy_M');
+var key = 'tokens_' + Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy_M');
 var d = props.getProperty(key);
 if (!d) { return '今月の使用記録はまだありません。'; }
 var data = JSON.parse(d);
 var cost = Math.round((data.input / 1000000 * 3 + data.output / 1000000 * 15) * 150);
 var mn = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-var monthIdx = parseInt(fmtDate(now, 'M'), 10) - 1;
+var monthIdx = parseInt(Utilities.formatDate(now, 'Asia/Tokyo', 'M'), 10) - 1;
 return mn[monthIdx] + 'の使用量（概算）\n入力: ' + data.input + ' tok\n出力: ' + data.output + ' tok\n推定: 約¥' + cost + '\n\n⚠️ あくまで目安です。正確な残高👇\nhttps://console.anthropic.com/settings/billing';
 }
 function getTone(uid, props) {
@@ -1651,6 +1659,14 @@ var presets = {
 if (presets[tone] !== undefined) { return presets[tone]; }
 return '\n・口調: ' + tone;
 }
+function toolSetTone(input, uid) {
+if (!uid) return '口調設定に失敗しました';
+var t = (input.tone || '').trim();
+if (!t) return '口調が指定されていません';
+var p = PropertiesService.getScriptProperties();
+setTone(uid, t, p);
+return '口調を「' + t + '」に設定しました。次のメッセージから反映されます。';
+}
 function toolCompany(input,uid){
 if(uid!=='U029395d561dbfe988aceae03cbf6affc')return'この機能は未設定です';
 var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');
@@ -1667,17 +1683,11 @@ var fs=sb.next().getFiles(),items=[];
 while(fs.hasNext()&&items.length<10){var f=fs.next();items.push(f.getName()+'\n'+f.getBlob().getDataAsString().substring(0,200));}
 if(!items.length)return dept+'にメモはまだありません';
 return'📁 '+dept+' ('+items.length+'件)\n\n'+items.join('\n---\n');}
-function toolSetTone(input, uid) {
-if (!uid) return '口調設定に失敗しました';
-var t = (input.tone || '').trim();
-if (!t) return '口調が指定されていません';
-var p = PropertiesService.getScriptProperties();
-setTone(uid, t, p);
-return '口調を「' + t + '」に設定しました。次のメッセージから反映されます。';
-}
-function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスク記録');}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰'+(d.v||msg)+'\n'+fmtDate(dt,'M/d H')+'時');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモ記録');}}catch(e){}}
+function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスク記録');}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰'+(d.v||msg)+'\n'+Utilities.formatDate(dt,'Asia/Tokyo','M/d H')+'時');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモ記録');}}catch(e){}}
 
-function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){return JSON.parse(UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText()).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:秘書室,LINE事業,Instagram,note,介護ブログ,コミュニティ,学校コンサル,HP運用\nメモ:'+t+'\nカテゴリ名のみ',15);var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');var subs=root.getFoldersByName(cat);var folder=subs.hasNext()?subs.next():root.createFolder(cat);folder.createFile(fmtDate(new Date(),'yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+fmtDate(new Date(),'yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+
+function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){return JSON.parse(UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText()).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:秘書室,LINE事業,Instagram,note,介護ブログ,コミュニティ,学校コンサル,HP運用\nメモ:'+t+'\nカテゴリ名のみ',15);var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');var subs=root.getFoldersByName(cat);var folder=subs.hasNext()?subs.next():root.createFolder(cat);folder.createFile(Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+
 
 function _addTask(t){var s=getDataSheet('タスク');if(s.getLastRow()===0)s.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);s.appendRow([Date.now()+'',getJSTNow(),'','中',t,'未完了']);}
 function processGroupMessage(uid, message, props) {
@@ -1725,6 +1735,7 @@ muteHttpExceptions: true
 }
 function getCategoryHelp(message){var m={'Gmailヘルプ':'📧 Gmail','カレンダーヘルプ':'📅 カレンダー','ドキュメントヘルプ':'📄 ドキュメント','スプレッドシートヘルプ':'📊 スプシ','ドライブヘルプ':'📁 ドライブ','写真保存ヘルプ':'📸 写真保存','メモヘルプ':'📝 メモ','タスクヘルプ':'✅ タスク','レポートヘルプ':'📊 レポート','リマインダーヘルプ':'⏰ リマインダー','誕生日リマインダーヘルプ':'🎂 誕生日','朝のスケジュール確認ヘルプ':'☀️ 朝確認','URL要約ヘルプ':'🌐 URL要約','経路・ホテルヘルプ':'🗺 経路/🏨 ホテル','翻訳ヘルプ':'🌍 翻訳','文章校正ヘルプ':'✍️ 文章校正','AIチャットヘルプ':'💬 AIチャット','Web検索ヘルプ':'🔍 Web検索','天気ヘルプ':'🌤 天気','返信作成ヘルプ':'✉️ 返信作成','翻訳・文章校正ヘルプ':'🌍/✍️','口調変更ヘルプ':'🗣 口調変更','コスト管理ヘルプ':'💰 コスト管理'};return m[message]||null;}
 
+
 function helpText() {
 return '【LINE AI秘書 機能一覧】\n\n' +
 '📧Gmail / 📅カレンダー / 📄ドキュメント\n' +
@@ -1741,6 +1752,7 @@ var triggers = ScriptApp.getProjectTriggers();
 for (var i = 0; i < triggers.length; i++) {
 if (triggers[i].getHandlerFunction() === 'checkReminders') {
 
+
 return;
 }
 }
@@ -1748,6 +1760,7 @@ ScriptApp.newTrigger('checkReminders')
 .timeBased()
 .everyMinutes(5)
 .create();
+
 
 }
 function getCarouselMessage() {
@@ -1846,9 +1859,11 @@ muteHttpExceptions: true
 });
 var code = res.getResponseCode();
 
+
 if (code !== 200) { return false; }
 return true;
 } catch(e) {
+
 
 return false;
 }
@@ -1865,7 +1880,9 @@ payload: JSON.stringify({ to: userId, messages: [getCarouselMessage()] }),
 muteHttpExceptions: true
 });
 
+
 } catch(e) {
+
 
 }
 }
@@ -1877,7 +1894,7 @@ var countKey = 'demo_count_' + (cfg.USER_ID || '');
 var count = parseInt(PropertiesService.getScriptProperties().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 var myEmail = Session.getActiveUser().getEmail();
-var today = fmtDate(new Date(), 'M月d日');
+var today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'M月d日');
 var emails = [
 {
 subject: '【' + today + '】株式会社田中商事 田中様より',
@@ -1896,6 +1913,7 @@ for (var i = 0; i < emails.length; i++) {
 GmailApp.sendEmail(myEmail, emails[i].subject, emails[i].body);
 }
 
+
 }
 function setupDemoEmailTrigger() {
 var triggers = ScriptApp.getProjectTriggers();
@@ -1908,6 +1926,7 @@ ScriptApp.newTrigger('sendDemoEmails').timeBased().atHour(8).everyDays(1).create
 }
 function dailyClearCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
+
 
 }
 function setupDailyCacheClearTrigger() {
@@ -1959,6 +1978,7 @@ ScriptApp.newTrigger('dailyCheck')
 .everyDays(1)
 .create();
 
+
 }
 function testAllPermissions() {
 var threads = GmailApp.search('is:unread in:inbox', 0, 1);
@@ -1985,6 +2005,7 @@ setupDailyCheckTrigger();
 var demoMode = PropertiesService.getScriptProperties().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') { setupDemoEmailTrigger(); }
 
+
 }
 function testSetup() {
 var config = getConfig();
@@ -1992,8 +2013,13 @@ var config = getConfig();
 
 
 
+
+
+
+
 }
 function clearCodeCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
+
 
 }
