@@ -941,7 +941,7 @@ var matched = Object.keys(needed);
 if (matched.length > 0) {
 return all.filter(function(t){ return needed[t.name]; });
 }
-return [];
+return all;
 }
 function getRegisteredToolNames() {
 var groups = {
@@ -1917,7 +1917,9 @@ if (title) { results.push((pub ? '[' + pub.slice(0,16) + '] ' : '') + title); }
 } catch(e) {  }
 try {
 var ddgUrl = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
-var ddgData = JSON.parse(UrlFetchApp.fetch(ddgUrl, { muteHttpExceptions: true }).getContentText());
+var _drt = UrlFetchApp.fetch(ddgUrl, { muteHttpExceptions: true }).getContentText();
+if (!_drt || _drt.charAt(0) === '<') { _drt = '{}'; }
+var ddgData = JSON.parse(_drt);
 if (ddgData.AbstractText) { results.unshift('[概要] ' + ddgData.AbstractText); }
 } catch(e) {  }
 if (results.length > 0) { return '検索結果 [' + query + ']:\n' + results.join('\n'); }
@@ -2035,7 +2037,7 @@ var cityCoords = {
 '神戸':{lat:34.6901,lon:135.1956},'那覇':{lat:26.2124,lon:127.6809},
 '金沢':{lat:36.5613,lon:136.6562},'熊本':{lat:32.7898,lon:130.7417}
 };
-var city = input.city || '東京';
+var city = (input.city || '東京').replace(/[都道府県市区町村]$/g, '');
 var coord = cityCoords[city] || cityCoords['東京'];
 var name = cityCoords[city] ? city : '東京';
 try {
