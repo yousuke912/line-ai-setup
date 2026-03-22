@@ -1,5 +1,5 @@
 function getConfig() {
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 return {
 LINE_TOKEN: props.getProperty('LINE_CHANNEL_ACCESS_TOKEN'),
 ANTHROPIC_KEY: props.getProperty('ANTHROPIC_API_KEY'),
@@ -12,19 +12,15 @@ var SCRIPT_CACHE = CacheService.getScriptCache();
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 3;
 var TZ = TZ;
-function _P(){return PropertiesService.getScriptProperties();}
 var KISH_UID = KISH_UID;
 var MY_CO_FOLDER = MY_CO_FOLDER;
 var DEPTS = ['秘書室','LINE事業','Instagram','note','介護ブログ','コミュニティ','学校コンサル','HP運用','その他'];
-function _setupTrigger(fn,h){var ts=ScriptApp.getProjectTriggers();for(var i=0;i<ts.length;i++){if(ts[i].getHandlerFunction()===fn)ScriptApp.deleteTrigger(ts[i]);}ScriptApp.newTrigger(fn).timeBased().atHour(h).everyDays(1).create();}
-function getJSTNow(){return Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm:ss');}
-function getJSTDate(){return Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd');}
 function getRemoteConfig() {
 var cached = SCRIPT_CACHE.get(REMOTE_CONFIG_CACHE_KEY);
 if (cached) {
 try { return JSON.parse(cached); } catch(e) {}
 }
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 var configUrl = props.getProperty('MASTER_CONFIG_URL');
 if (!configUrl) {
 configUrl = 'https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3RF3SJVIKuIG0WFGyMzmlbvy--O9qqoDiXLi4zP4O-xw/exec';
@@ -81,7 +77,7 @@ return parts;
 function getHistory(uid) {
 var cached = SCRIPT_CACHE.get(HISTORY_PREFIX + uid);
 if (cached) { return JSON.parse(cached); }
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 var raw = props.getProperty(HISTORY_PREFIX + uid);
 if (!raw) { return []; }
 try { SCRIPT_CACHE.put(HISTORY_PREFIX + uid, raw, 21600); } catch(e) {}
@@ -91,26 +87,26 @@ function saveHistory(uid, history) {
 if (history.length > MAX_TURNS * 2) { history = history.slice(-MAX_TURNS * 2); }
 var json = JSON.stringify(history);
 try { SCRIPT_CACHE.put(HISTORY_PREFIX + uid, json, 43200); } catch(e) {}
-try { _P().setProperty(HISTORY_PREFIX + uid, json); } catch(e) {}
+try { PropertiesService.getScriptProperties().setProperty(HISTORY_PREFIX + uid, json); } catch(e) {}
 }
 function clearHistory(uid) {
 try { SCRIPT_CACHE.remove(HISTORY_PREFIX + uid); } catch(e) {}
-try { _P().deleteProperty(HISTORY_PREFIX + uid); } catch(e) {}
+try { PropertiesService.getScriptProperties().deleteProperty(HISTORY_PREFIX + uid); } catch(e) {}
 }
 var REPLY_MODE_PREFIX = 'replymode_';
 function getReplyMode(uid) {
 var cached = SCRIPT_CACHE.get(REPLY_MODE_PREFIX + uid);
 if (cached) { return cached === 'true'; }
-var val = _P().getProperty(REPLY_MODE_PREFIX + uid);
+var val = PropertiesService.getScriptProperties().getProperty(REPLY_MODE_PREFIX + uid);
 return val === 'true';
 }
 function setReplyMode(uid, bool) {
 var val = bool ? 'true' : 'false';
 try { SCRIPT_CACHE.put(REPLY_MODE_PREFIX + uid, val, 43200); } catch(e) {}
-_P().setProperty(REPLY_MODE_PREFIX + uid, val);
+PropertiesService.getScriptProperties().setProperty(REPLY_MODE_PREFIX + uid, val);
 }
 function getDataSheet(sheetName) {
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 var ssId = props.getProperty('DATA_SS_ID');
 var ss;
 if (ssId) { try { ss = SpreadsheetApp.openById(ssId); } catch(e) { ss = null; } }
@@ -139,7 +135,7 @@ if (ev.source.type === 'group' || ev.source.type === 'room') {
 if (!ev.message || ev.message.type !== 'text') { continue; }
 var msgText = ev.message.text.trim();
 var senderUid = ev.source.userId;
-var grpProps = SP;
+var grpProps = PropertiesService.getScriptProperties();
 var ownerUid = grpProps.getProperty('LINE_USER_ID') || '';
 var isMentioned = false;
 if (ev.message.mention && ev.message.mention.mentionees) {
@@ -202,7 +198,7 @@ pushToLine(cfg.USER_ID,
 return ContentService.createTextOutput('OK');
 }
 function saveUserId(uid) {
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 if (!props.getProperty('LINE_USER_ID')) { props.setProperty('LINE_USER_ID', uid); }
 }
 function processMessage(uid, message) {
@@ -214,7 +210,7 @@ var remoteConfig = getRemoteConfig();
 if (remoteConfig.maintenance === 'TRUE') {
 return remoteConfig.maintenance_msg || 'ただいまメンテナンス中です。しばらくお待ちください。';
 }
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 var announcementText = remoteConfig.announcement || '';
 if (announcementText) {
 var announceSentKey = 'ann_sent_' + announcementText.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
@@ -881,13 +877,9 @@ required:['area']
 cache_control: { type:'ephemeral' }
 },
 {
-name: 'company_view',
+name:'company_view',
 description:'部署一覧または指定部署のメモ一覧を表示',
-input_schema: {
-type:'object',
-properties: { department: { type:'string', description:'部署名（省略で全部署一覧）' } },
-required:[]
-}
+input_schema:{type:'object',properties:{department:{type:'string',description:'部署名（省略で全部署一覧）'}},required:[]}
 }
 ];
 }
@@ -997,7 +989,7 @@ if (name === 'task_add') { return toolTaskAdd(input); }
 if (name === 'task_view') { return toolTaskView(input); }
 if (name === 'task_done') { return toolTaskDone(input); }
 if (name === 'task_delete') { return toolTaskDelete(input); }
-if (name === 'company_view') { input._uid = uid; return toolCompanyView(input); }
+if (name === 'company_view') { return toolCompanyView(input); }
 if (name === 'web_search') { return toolWebSearch(input); }
 if (name === 'briefing_setting') { return toolBriefingSetting(input); }
 if (name === 'weather') { return toolWeather(input); }
@@ -1410,10 +1402,10 @@ return '「' + kw + '」に該当するリマインダーが見つかりませ�
 function checkReminders() {
 var config = getConfig();
 if (!config.LINE_TOKEN || !config.USER_ID) { return; }
-var demoMode = _P().getProperty('DEMO_MODE');
+var demoMode = PropertiesService.getScriptProperties().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') {
 var countKey = 'demo_count_' + config.USER_ID;
-var count = parseInt(_P().getProperty(countKey) || '0');
+var count = parseInt(PropertiesService.getScriptProperties().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 }
 var sheet = getDataSheet('リマインダー');
@@ -1931,7 +1923,7 @@ if (results.length > 0) { return '検索結果 [' + query + ']:\n' + results.joi
 return '「' + query + '」の検索結果が見つかりませんでした。Claudeの知識で回答してください。';
 }
 function toolBriefingSetting(input) {
-var props = SP;
+var props = PropertiesService.getScriptProperties();
 if (input.action === 'stop') {
 props.setProperty('BRIEFING_ENABLED', 'FALSE');
 var triggers = ScriptApp.getProjectTriggers();
@@ -1949,12 +1941,12 @@ return '☀️ 毎朝' + hour + '時に予定をお届けします！';
 function morningBriefing() {
 var config = getConfig();
 if (!config.LINE_TOKEN || !config.USER_ID) { return; }
-var briefingEnabled = _P().getProperty('BRIEFING_ENABLED');
+var briefingEnabled = PropertiesService.getScriptProperties().getProperty('BRIEFING_ENABLED');
 if (briefingEnabled === 'FALSE') { return; }
-var demoMode = _P().getProperty('DEMO_MODE');
+var demoMode = PropertiesService.getScriptProperties().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') {
 var countKey = 'demo_count_' + config.USER_ID;
-var countProp = _P().getProperty(countKey);
+var countProp = PropertiesService.getScriptProperties().getProperty(countKey);
 var count = countProp ? parseInt(countProp) : 0;
 if (count >= 10) { return; }
 }
@@ -2020,8 +2012,17 @@ pushToLine(config.USER_ID, lines.join('\n'));
 
 }
 function setupBriefingTrigger() {
-var hour = parseInt(_P().getProperty('BRIEFING_HOUR') || '7', 10);
-_setupTrigger('morningBriefing', hour);
+var props = PropertiesService.getScriptProperties();
+var hour = parseInt(props.getProperty('BRIEFING_HOUR') || '7', 10);
+var triggers = ScriptApp.getProjectTriggers();
+for (var i = 0; i < triggers.length; i++) {
+if (triggers[i].getHandlerFunction() === 'morningBriefing') { ScriptApp.deleteTrigger(triggers[i]); }
+}
+ScriptApp.newTrigger('morningBriefing')
+.timeBased()
+.atHour(hour)
+.everyDays(1)
+.create();
 }
 function toolWeather(input) {
 var cityCoords = {
@@ -2097,10 +2098,10 @@ var monthIdx = parseInt(Utilities.formatDate(now, TZ, 'M'), 10) - 1;
 return mn[monthIdx] + 'の使用量（概算）\n入力: ' + data.input + ' tok\n出力: ' + data.output + ' tok\n推定: 約¥' + cost + '\n\n⚠️ あくまで目安です。正確な残高👇\nhttps://console.anthropic.com/settings/billing';
 }
 function getTone(uid, props) {
-return (props || SP).getProperty('tone_' + uid) || '';
+return (props || PropertiesService.getScriptProperties()).getProperty('tone_' + uid) || '';
 }
 function setTone(uid, tone, props) {
-(props || SP).setProperty('tone_' + uid, tone);
+(props || PropertiesService.getScriptProperties()).setProperty('tone_' + uid, tone);
 }
 function getTonePrompt(uid, props) {
 var tone = getTone(uid, props);
@@ -2120,8 +2121,8 @@ function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;va
 
 
 function _getDeptFolder(cat){var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(cat);if(it.hasNext())return it.next();return root.createFolder(cat);}
-function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;var folder=_getDeptFolder(cat);folder.createFile(cat+'_'+Utilities.formatDate(new Date(),TZ,'yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
-function toolCompanyView(input){var uid=input._uid;if(uid!==KISH_UID)return'この機能は未設定です';var root=DriveApp.getFolderById(MY_CO_FOLDER);var dept=String(input.department||'').trim();if(dept){var it=root.getFoldersByName(dept);if(!it.hasNext())return'「'+dept+'」部署フォルダが見つかりません';var folder=it.next();var files=folder.getFiles();var lines=['📁 '+dept+' のメモ:'];var count=0;while(files.hasNext()&&count<10){var f=files.next();lines.push((count+1)+'. '+f.getName()+' ('+Utilities.formatDate(f.getDateCreated(),TZ,'M/d')+')');count++;}if(count===0)return dept+'にはまだメモがありません';return lines.join('\n');}var lines=['🏢 部署一覧:'];for(var i=0;i<DEPTS.length;i++){var it2=root.getFoldersByName(DEPTS[i]);var cnt=0;if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();cnt++;}}lines.push((i+1)+'. '+DEPTS[i]+' ('+cnt+'件)');}return lines.join('\n')+'\n\n「〇〇部のメモ見せて」で詳細表示';}
+function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;_getDeptFolder(cat).createFile(cat+'_'+Utilities.formatDate(new Date(),TZ,'yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),TZ,'yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';var root=DriveApp.getFolderById(MY_CO_FOLDER);var dept=String(input.department||'').trim();if(dept){var it=root.getFoldersByName(dept);if(!it.hasNext())return'「'+dept+'」部署フォルダが見つかりません';var files=it.next().getFiles();var lines=['📁 '+dept+' のメモ:'];var c=0;while(files.hasNext()&&c<10){var f=files.next();lines.push((c+1)+'. '+f.getName()+' ('+Utilities.formatDate(f.getDateCreated(),TZ,'M/d')+')');c++;}if(c===0)return dept+'にはまだメモがありません';return lines.join('\n');}var lines=['🏢 部署一覧:'];for(var i=0;i<DEPTS.length;i++){var it2=root.getFoldersByName(DEPTS[i]);var cnt=0;if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();cnt++;}}lines.push((i+1)+'. '+DEPTS[i]+' ('+cnt+'件)');}return lines.join('\n')+'\n\n「〇〇部のメモ見せて」で詳細表示';}
 
 
 function _addTask(t){var s=getDataSheet('タスク');if(s.getLastRow()===0)s.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);s.appendRow([Date.now()+'',getJSTNow(),'','中',t,'未完了']);}
@@ -2322,11 +2323,11 @@ muteHttpExceptions: true
 }
 }
 function sendDemoEmails() {
-var demoMode = _P().getProperty('DEMO_MODE');
+var demoMode = PropertiesService.getScriptProperties().getProperty('DEMO_MODE');
 if (demoMode !== 'TRUE') { return; }
 var cfg = getConfig();
 var countKey = 'demo_count_' + (cfg.USER_ID || '');
-var count = parseInt(_P().getProperty(countKey) || '0');
+var count = parseInt(PropertiesService.getScriptProperties().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 var myEmail = Session.getActiveUser().getEmail();
 var today = Utilities.formatDate(new Date(), TZ, 'M月d日');
@@ -2350,13 +2351,29 @@ GmailApp.sendEmail(myEmail, emails[i].subject, emails[i].body);
 
 
 }
-function setupDemoEmailTrigger(){_setupTrigger('sendDemoEmails',8);}
+function setupDemoEmailTrigger() {
+var triggers = ScriptApp.getProjectTriggers();
+for (var i = 0; i < triggers.length; i++) {
+if (triggers[i].getHandlerFunction() === 'sendDemoEmails') {
+ScriptApp.deleteTrigger(triggers[i]);
+}
+}
+ScriptApp.newTrigger('sendDemoEmails').timeBased().atHour(8).everyDays(1).create();
+}
 function dailyClearCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
 
 
 }
-function setupDailyCacheClearTrigger(){_setupTrigger('dailyClearCache',3);}
+function setupDailyCacheClearTrigger() {
+var triggers = ScriptApp.getProjectTriggers();
+for (var i = 0; i < triggers.length; i++) {
+if (triggers[i].getHandlerFunction() === 'dailyClearCache') {
+ScriptApp.deleteTrigger(triggers[i]);
+}
+}
+ScriptApp.newTrigger('dailyClearCache').timeBased().atHour(3).everyDays(1).create();
+}
 function dailyCheck(){var c=getConfig(),iss=[];
 if(!c.LINE_TOKEN)iss.push('🔴 LINE_TOKEN未設定');
 if(!c.ANTHROPIC_KEY)iss.push('🔴 ANTHROPIC_KEY未設定');
@@ -2369,7 +2386,21 @@ pushToLine(c.USER_ID,'🔍 日次チェック '+getJSTNow()+'\n⚠️ 要確認'
 function getCategoryHelpMap() {
 return {'Gmailヘルプ':1,'カレンダーヘルプ':1,'ドキュメントヘルプ':1,'スプレッドシートヘルプ':1,'ドライブヘルプ':1,'写真保存ヘルプ':1,'メモヘルプ':1,'タスクヘルプ':1,'レポートヘルプ':1,'リマインダーヘルプ':1,'誕生日リマインダーヘルプ':1,'朝のスケジュール確認ヘルプ':1,'URL要約ヘルプ':1,'経路・ホテルヘルプ':1,'翻訳ヘルプ':1,'文章校正ヘルプ':1,'AIチャットヘルプ':1,'Web検索ヘルプ':1,'天気ヘルプ':1,'返信作成ヘルプ':1,'翻訳・文章校正ヘルプ':1,'口調変更ヘルプ':1,'コスト管理ヘルプ':1,'ヘルプ':1};
 }
-function setupDailyCheckTrigger(){_setupTrigger('dailyCheck',0);}
+function setupDailyCheckTrigger() {
+var triggers = ScriptApp.getProjectTriggers();
+for (var i = 0; i < triggers.length; i++) {
+if (triggers[i].getHandlerFunction() === 'dailyCheck') {
+ScriptApp.deleteTrigger(triggers[i]);
+}
+}
+ScriptApp.newTrigger('dailyCheck')
+.timeBased()
+.atHour(0)
+.everyDays(1)
+.create();
+
+
+}
 function testAllPermissions() {
 var threads = GmailApp.search('is:unread in:inbox', 0, 1);
 var myEmail = Session.getActiveUser().getEmail();
@@ -2392,7 +2423,7 @@ setupReminderTrigger();
 setupBriefingTrigger();
 setupDailyCacheClearTrigger();
 setupDailyCheckTrigger();
-var demoMode = _P().getProperty('DEMO_MODE');
+var demoMode = PropertiesService.getScriptProperties().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') { setupDemoEmailTrigger(); }
 
 
