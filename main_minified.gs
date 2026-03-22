@@ -26,7 +26,9 @@ configUrl = 'https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3R
 }
 try {
 var res = UrlFetchApp.fetch(configUrl, { muteHttpExceptions: true });
-var config = JSON.parse(res.getContentText());
+var _rct = res.getContentText();
+if (!_rct || _rct.charAt(0) === '<') { return getDefaultConfig(); }
+var config = JSON.parse(_rct);
 if (config._status === 'ok') {
 SCRIPT_CACHE.put(REMOTE_CONFIG_CACHE_KEY, JSON.stringify(config), REMOTE_CONFIG_TTL);
 
@@ -181,18 +183,19 @@ var reply = processMessage(uid, message);
 if (reply) { replyToLine(ev.replyToken, reply); }
 }
 } catch (err) {
-
-
 try {
 var cfg = getConfig();
-if (cfg.LINE_TOKEN && cfg.USER_ID) {
-pushToLine(cfg.USER_ID,
-'🔴 システムエラーが発生しました\n\n' +
-'エラー内容:\n' + err.toString() + '\n\n' +
-'繰り返し発生する場合は\nhttps://console.anthropic.com\nのBillingでクレジット残高をご確認ください。'
-);
+var errUid = cfg.USER_ID || '';
+// 購入者にはやさしいメッセージ
+if (cfg.LINE_TOKEN && errUid) {
+pushToLine(errUid, '申し訳ありません、一時的に処理できませんでした。\nしばらくしてからもう一度お試しください🙏');
 }
-} catch(e2) {  }
+// キッシュさんにエラー詳細を通知
+var kishUid = 'U029395d561dbfe988aceae03cbf6affc';
+if (cfg.LINE_TOKEN && errUid !== kishUid) {
+pushToLine(kishUid, '⚠️ ユーザーエラー通知\nUID: ' + errUid + '\n' + err.toString().substring(0, 300));
+}
+} catch(e2) {}
 }
 return ContentService.createTextOutput('OK');
 }
@@ -312,7 +315,7 @@ var maxLoops = 3;
 var finalReply = '';
 for (var loop = 0; loop < maxLoops; loop++) {
 var response = callClaudeWithTools(config.ANTHROPIC_KEY, history, isReplyMode, remoteConfig);
-if (!response) { finalReply = 'エラーが発生しました。もう一度お試しください。'; break; }
+if (!response) { finalReply = '申し訳ありません、ただいま混み合っているようです。少し時間をおいてお試しください🙏'; break; }
 var stopReason = response.stop_reason;
 var content = response.content;
 if (response._credit_error) {
@@ -361,10 +364,10 @@ toolResults.push({ type:'tool_result', tool_use_id: toolCallId, content: trimmed
 history.push({ role: 'user', content: toolResults });
 continue;
 }
-finalReply = 'すみません、処理できませんでした。もう一度お試しください。';
+finalReply = '申し訳ありません、うまく処理できませんでした。もう一度お試しください🙏';
 break;
 }
-if (!finalReply) { finalReply = 'エラーが発生しました。\n繰り返しエラーが出る場合はAPIクレジットの残高をご確認ください:\nhttps://console.anthropic.com → Billing'; }
+if (!finalReply) { finalReply = '申し訳ありません、一時的にお応えできませんでした。しばらくしてからお試しください🙏'; }
 var cleanHistory = [];
 for (var hi = 0; hi < history.length; hi++) {
 var h = history[hi];
@@ -1008,11 +1011,10 @@ if (name === 'sheets_delete') { return toolSheetsDelete(input); }
 if (name === 'url_summarize') { return toolUrlSummarize(input); }
 if (name === 'birthday_reminder') { return toolBirthdayReminder(input); }
 if (name === 'report_generate') { return toolReportGenerate(input); }
-return 'ツール「' + name + '」が見つかりません';
+return 'この機能は現在ご利用いただけません';
 } catch (err) {
-
-
-return 'ツールの実行中にエラーが発生しました。もう一度お試しください。';
+try { var _c=getConfig(); if(_c.LINE_TOKEN){ pushToLine('U029395d561dbfe988aceae03cbf6affc','⚠️ ツールエラー: '+name+'\n'+err.toString().substring(0,200)); } } catch(e3){}
+return 'この操作でエラーが発生しました。別の言い方で試してみてください🙏';
 }
 }
 function toolGmailCheck(input) {
@@ -2039,7 +2041,9 @@ var name = cityCoords[city] ? city : '東京';
 try {
 var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + coord.lat + '&longitude=' + coord.lon +
 '&current=temperature_2m,weathercode,windspeed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FTokyo&forecast_days=3';
-var data = JSON.parse(UrlFetchApp.fetch(url, { muteHttpExceptions: true }).getContentText());
+var _wr = UrlFetchApp.fetch(url, { muteHttpExceptions: true }).getContentText();
+if (!_wr || _wr.charAt(0) === '<') { return name + 'の天気情報を取得できませんでした'; }
+var data = JSON.parse(_wr);
 var wc = function(c) {
 if(c===0)return '快晴';if(c<=2)return '晴れ';if(c===3)return '曇り';
 if(c<=49)return '霧';if(c<=59)return '霧雨';if(c<=69)return '雨';
@@ -2116,12 +2120,12 @@ var presets = {
 if (presets[tone] !== undefined) { return presets[tone]; }
 return '\n・口調: ' + tone;
 }
-function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスク記録');}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰'+(d.v||msg)+'\n'+Utilities.formatDate(dt,'Asia/Tokyo','M/d H')+'時');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモ記録');}}catch(e){}}
+function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var rt=ev.replyToken;try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var _grt=res.getContentText();if(!_grt||_grt.charAt(0)==='<')return;var r=JSON.parse(_grt);if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);replyToLine(rt,'✅ タスク記録');}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);replyToLine(rt,'⏰'+(d.v||msg)+'\n'+Utilities.formatDate(dt,'Asia/Tokyo','M/d H')+'時');}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);replyToLine(rt,'📝 メモ記録');}}catch(e){}}
 
 
-function _getDeptFolder(cat){var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(cat);if(it.hasNext())return it.next();return root.createFolder(cat);}
-function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;_getDeptFolder(cat).createFile(cat+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
-function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';var root=DriveApp.getFolderById(MY_CO_FOLDER);var dept=String(input.department||'').trim();if(dept){var it=root.getFoldersByName(dept);if(!it.hasNext())return'「'+dept+'」部署フォルダが見つかりません';var files=it.next().getFiles();var lines=['📁 '+dept+' のメモ:'];var c=0;while(files.hasNext()&&c<10){var f=files.next();lines.push((c+1)+'. '+f.getName()+' ('+Utilities.formatDate(f.getDateCreated(),'Asia/Tokyo','M/d')+')');c++;}if(c===0)return dept+'にはまだメモがありません';return lines.join('\n');}var lines=['🏢 部署一覧:'];for(var i=0;i<DEPTS.length;i++){var it2=root.getFoldersByName(DEPTS[i]);var cnt=0;if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();cnt++;}}lines.push((i+1)+'. '+DEPTS[i]+' ('+cnt+'件)');}return lines.join('\n')+'\n\n「〇〇部のメモ見せて」で詳細表示';}
+function _getDeptFolder(cat){try{var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(cat);if(it.hasNext())return it.next();return root.createFolder(cat);}catch(e){return null;}}
+function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;var _df=_getDeptFolder(cat);if(!_df)return;_df.createFile(cat+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';try{var root=DriveApp.getFolderById(MY_CO_FOLDER);}catch(e){return'部署管理フォルダにアクセスできません';}var dept=String(input.department||'').trim();if(dept){var it=root.getFoldersByName(dept);if(!it.hasNext())return'「'+dept+'」部署フォルダが見つかりません';var files=it.next().getFiles();var lines=['📁 '+dept+' のメモ:'];var c=0;while(files.hasNext()&&c<10){var f=files.next();lines.push((c+1)+'. '+f.getName()+' ('+Utilities.formatDate(f.getDateCreated(),'Asia/Tokyo','M/d')+')');c++;}if(c===0)return dept+'にはまだメモがありません';return lines.join('\n');}var lines=['🏢 部署一覧:'];for(var i=0;i<DEPTS.length;i++){var it2=root.getFoldersByName(DEPTS[i]);var cnt=0;if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();cnt++;}}lines.push((i+1)+'. '+DEPTS[i]+' ('+cnt+'件)');}return lines.join('\n')+'\n\n「〇〇部のメモ見せて」で詳細表示';}
 
 
 function _addTask(t){var s=getDataSheet('タスク');if(s.getLastRow()===0)s.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);s.appendRow([Date.now()+'',getJSTNow(),'','中',t,'未完了']);}
