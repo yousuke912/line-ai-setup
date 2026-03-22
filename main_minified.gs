@@ -2379,15 +2379,7 @@ ScriptApp.deleteTrigger(triggers[i]);
 }
 ScriptApp.newTrigger('dailyClearCache').timeBased().atHour(3).everyDays(1).create();
 }
-function dailyCheck(){var c=getConfig(),iss=[];
-if(!c.LINE_TOKEN)iss.push('🔴 LINE_TOKEN未設定');
-if(!c.ANTHROPIC_KEY)iss.push('🔴 ANTHROPIC_KEY未設定');
-else if(c.ANTHROPIC_KEY.indexOf('sk-ant-')!==0)iss.push('🔴 APIキー形式不正');
-if(!c.USER_ID)iss.push('🔴 USER_ID未設定');
-try{var at={};ScriptApp.getProjectTriggers().forEach(function(t){at[t.getHandlerFunction()]=1;});['checkReminders','morningBriefing','dailyClearCache','dailyCheck'].forEach(function(n){if(!at[n])iss.push('🔴 トリガー未登録:'+n);});}catch(e){}
-if(!c.LINE_TOKEN||!c.USER_ID)return;
-if(!iss.length)return;
-pushToLine(c.USER_ID,'🔍 日次チェック '+getJSTNow()+'\n⚠️ 要確認'+iss.length+'件\n'+iss.join('\n\n'));}
+function dailyCheck(){}
 function getCategoryHelpMap() {
 return {'Gmailヘルプ':1,'カレンダーヘルプ':1,'ドキュメントヘルプ':1,'スプレッドシートヘルプ':1,'ドライブヘルプ':1,'写真保存ヘルプ':1,'メモヘルプ':1,'タスクヘルプ':1,'レポートヘルプ':1,'リマインダーヘルプ':1,'誕生日リマインダーヘルプ':1,'朝のスケジュール確認ヘルプ':1,'URL要約ヘルプ':1,'経路・ホテルヘルプ':1,'翻訳ヘルプ':1,'文章校正ヘルプ':1,'AIチャットヘルプ':1,'Web検索ヘルプ':1,'天気ヘルプ':1,'返信作成ヘルプ':1,'翻訳・文章校正ヘルプ':1,'口調変更ヘルプ':1,'コスト管理ヘルプ':1,'ヘルプ':1};
 }
