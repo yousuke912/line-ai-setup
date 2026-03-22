@@ -1248,8 +1248,24 @@ function toolMemoAdd(input) {
 var sheet = getDataSheet('メモ');
 if (sheet.getLastRow() === 0) { sheet.appendRow(['ID', '日時', 'タグ', '内容']); }
 var id = new Date().getTime().toString();
-sheet.appendRow([id, getJSTNow(), input.tag || '', input.content]);
-return '保存完了: ' + input.content + (input.tag ? ' [' + input.tag + ']' : '');
+var tag = input.tag || '';
+// キッシュさんのみ：タグ未指定なら部署自動分類
+if (!tag && input._uid === KISH_UID) {
+try {
+var c = getConfig();
+if (c.ANTHROPIC_KEY) {
+var r = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+method:'post', contentType:'application/json',
+headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},
+payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:15,
+messages:[{role:'user',content:'分類:'+DEPTS.join(',')+'\nメモ:'+input.content+'\nカテゴリ名のみ'}]}),
+muteHttpExceptions:true}).getContentText();
+if (r && r.charAt(0) !== '<') { tag = JSON.parse(r).content[0].text.trim(); }
+}
+} catch(e) {}
+}
+sheet.appendRow([id, getJSTNow(), tag, input.content]);
+return '保存完了: ' + input.content + (tag ? ' [' + tag + ']' : '');
 }
 function toolMemoView(input) {
 var sheet = getDataSheet('メモ');
@@ -2127,7 +2143,43 @@ function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY)return;va
 
 function _getDeptFolder(cat){try{var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(cat);if(it.hasNext())return it.next();return root.createFolder(cat);}catch(e){return null;}}
 function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var r=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText();if(r.charAt(0)==='<')return'';return JSON.parse(r).content[0].text.trim();}try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:'+DEPTS.join(',')+'\nメモ:'+t+'\nカテゴリ名のみ',15);if(!cat)return;var _df=_getDeptFolder(cat);if(!_df)return;_df.createFile(cat+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
-function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';try{var root=DriveApp.getFolderById(MY_CO_FOLDER);}catch(e){return'部署管理フォルダにアクセスできません';}var dept=String(input.department||'').trim();if(dept){var it=root.getFoldersByName(dept);if(!it.hasNext())return'「'+dept+'」部署フォルダが見つかりません';var files=it.next().getFiles();var lines=['📁 '+dept+' のメモ:'];var c=0;while(files.hasNext()&&c<10){var f=files.next();lines.push((c+1)+'. '+f.getName()+' ('+Utilities.formatDate(f.getDateCreated(),'Asia/Tokyo','M/d')+')');c++;}if(c===0)return dept+'にはまだメモがありません';return lines.join('\n');}var lines=['🏢 部署一覧:'];for(var i=0;i<DEPTS.length;i++){var it2=root.getFoldersByName(DEPTS[i]);var cnt=0;if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();cnt++;}}lines.push((i+1)+'. '+DEPTS[i]+' ('+cnt+'件)');}return lines.join('\n')+'\n\n「〇〇部のメモ見せて」で詳細表示';}
+function toolCompanyView(input){if(input._uid!==KISH_UID)return'この機能は未設定です';
+var dept=String(input.department||'').trim();
+// メモシートから部署タグ付きメモを集計
+var memoSheet;try{memoSheet=getDataSheet('メモ');}catch(e){}
+var memoCounts={},memoItems={};
+if(memoSheet&&memoSheet.getLastRow()>1){
+var md=memoSheet.getDataRange().getValues();
+for(var mi=1;mi<md.length;mi++){
+if(!md[mi][3]||String(md[mi][2])==='DELETED')continue;
+var mtag=String(md[mi][2]||'');
+if(!memoCounts[mtag])memoCounts[mtag]=0;
+if(!memoItems[mtag])memoItems[mtag]=[];
+memoCounts[mtag]++;
+memoItems[mtag].push({content:md[mi][3],date:md[mi][1]});
+}}
+if(dept){
+var lines=['📋 '+dept+' の情報:'];var c=0;
+// Driveファイル
+try{var root=DriveApp.getFolderById(MY_CO_FOLDER);var it=root.getFoldersByName(dept);
+if(it.hasNext()){var files=it.next().getFiles();
+while(files.hasNext()&&c<5){var f=files.next();lines.push('📄 '+f.getName());c++;}}}catch(e){}
+// スプシメモ
+var items=memoItems[dept]||[];
+for(var j=Math.max(0,items.length-5);j<items.length;j++){
+lines.push('📝 '+items[j].content+' ('+items[j].date+')');c++;}
+if(c===0)return dept+'にはまだ情報がありません';
+return lines.join('\n');
+}
+// 全部署一覧
+var lines=['🏢 部署一覧:'];
+for(var i=0;i<DEPTS.length;i++){
+var dc=0;
+try{var root2=DriveApp.getFolderById(MY_CO_FOLDER);var it2=root2.getFoldersByName(DEPTS[i]);
+if(it2.hasNext()){var fs=it2.next().getFiles();while(fs.hasNext()){fs.next();dc++;}}}catch(e){}
+dc+=(memoCounts[DEPTS[i]]||0);
+lines.push((i+1)+'. '+DEPTS[i]+' ('+dc+'件)');}
+return lines.join('\n')+'\n\n「〇〇部の情報見せて」で詳細表示';}
 
 
 function _addTask(t){var s=getDataSheet('タスク');if(s.getLastRow()===0)s.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);s.appendRow([Date.now()+'',getJSTNow(),'','中',t,'未完了']);}
