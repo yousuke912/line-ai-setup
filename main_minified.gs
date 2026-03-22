@@ -12,7 +12,7 @@ var SCRIPT_CACHE = CacheService.getScriptCache();
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 3;
 var TZ = TZ;
-var SP = SP;
+function _P(){return PropertiesService.getScriptProperties();}
 var KISH_UID = KISH_UID;
 var MY_CO_FOLDER = MY_CO_FOLDER;
 var DEPTS = ['秘書室','LINE事業','Instagram','note','介護ブログ','コミュニティ','学校コンサル','HP運用','その他'];
@@ -91,23 +91,23 @@ function saveHistory(uid, history) {
 if (history.length > MAX_TURNS * 2) { history = history.slice(-MAX_TURNS * 2); }
 var json = JSON.stringify(history);
 try { SCRIPT_CACHE.put(HISTORY_PREFIX + uid, json, 43200); } catch(e) {}
-try { SP.setProperty(HISTORY_PREFIX + uid, json); } catch(e) {}
+try { _P().setProperty(HISTORY_PREFIX + uid, json); } catch(e) {}
 }
 function clearHistory(uid) {
 try { SCRIPT_CACHE.remove(HISTORY_PREFIX + uid); } catch(e) {}
-try { SP.deleteProperty(HISTORY_PREFIX + uid); } catch(e) {}
+try { _P().deleteProperty(HISTORY_PREFIX + uid); } catch(e) {}
 }
 var REPLY_MODE_PREFIX = 'replymode_';
 function getReplyMode(uid) {
 var cached = SCRIPT_CACHE.get(REPLY_MODE_PREFIX + uid);
 if (cached) { return cached === 'true'; }
-var val = SP.getProperty(REPLY_MODE_PREFIX + uid);
+var val = _P().getProperty(REPLY_MODE_PREFIX + uid);
 return val === 'true';
 }
 function setReplyMode(uid, bool) {
 var val = bool ? 'true' : 'false';
 try { SCRIPT_CACHE.put(REPLY_MODE_PREFIX + uid, val, 43200); } catch(e) {}
-SP.setProperty(REPLY_MODE_PREFIX + uid, val);
+_P().setProperty(REPLY_MODE_PREFIX + uid, val);
 }
 function getDataSheet(sheetName) {
 var props = SP;
@@ -1410,10 +1410,10 @@ return '「' + kw + '」に該当するリマインダーが見つかりませ�
 function checkReminders() {
 var config = getConfig();
 if (!config.LINE_TOKEN || !config.USER_ID) { return; }
-var demoMode = SP.getProperty('DEMO_MODE');
+var demoMode = _P().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') {
 var countKey = 'demo_count_' + config.USER_ID;
-var count = parseInt(SP.getProperty(countKey) || '0');
+var count = parseInt(_P().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 }
 var sheet = getDataSheet('リマインダー');
@@ -1949,12 +1949,12 @@ return '☀️ 毎朝' + hour + '時に予定をお届けします！';
 function morningBriefing() {
 var config = getConfig();
 if (!config.LINE_TOKEN || !config.USER_ID) { return; }
-var briefingEnabled = SP.getProperty('BRIEFING_ENABLED');
+var briefingEnabled = _P().getProperty('BRIEFING_ENABLED');
 if (briefingEnabled === 'FALSE') { return; }
-var demoMode = SP.getProperty('DEMO_MODE');
+var demoMode = _P().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') {
 var countKey = 'demo_count_' + config.USER_ID;
-var countProp = SP.getProperty(countKey);
+var countProp = _P().getProperty(countKey);
 var count = countProp ? parseInt(countProp) : 0;
 if (count >= 10) { return; }
 }
@@ -2020,7 +2020,7 @@ pushToLine(config.USER_ID, lines.join('\n'));
 
 }
 function setupBriefingTrigger() {
-var hour = parseInt(SP.getProperty('BRIEFING_HOUR') || '7', 10);
+var hour = parseInt(_P().getProperty('BRIEFING_HOUR') || '7', 10);
 _setupTrigger('morningBriefing', hour);
 }
 function toolWeather(input) {
@@ -2322,11 +2322,11 @@ muteHttpExceptions: true
 }
 }
 function sendDemoEmails() {
-var demoMode = SP.getProperty('DEMO_MODE');
+var demoMode = _P().getProperty('DEMO_MODE');
 if (demoMode !== 'TRUE') { return; }
 var cfg = getConfig();
 var countKey = 'demo_count_' + (cfg.USER_ID || '');
-var count = parseInt(SP.getProperty(countKey) || '0');
+var count = parseInt(_P().getProperty(countKey) || '0');
 if (count >= 10) { return; }
 var myEmail = Session.getActiveUser().getEmail();
 var today = Utilities.formatDate(new Date(), TZ, 'M月d日');
@@ -2392,7 +2392,7 @@ setupReminderTrigger();
 setupBriefingTrigger();
 setupDailyCacheClearTrigger();
 setupDailyCheckTrigger();
-var demoMode = SP.getProperty('DEMO_MODE');
+var demoMode = _P().getProperty('DEMO_MODE');
 if (demoMode === 'TRUE') { setupDemoEmailTrigger(); }
 
 
