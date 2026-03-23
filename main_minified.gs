@@ -295,6 +295,14 @@ return '「カスタム:関西弁で」と送信してください';
 if (message === '4') {
 return '「カスタム:関西弁で」のように送信してください';
 }
+if (message === '週次まとめON' || message === '週次まとめon') {
+PropertiesService.getScriptProperties().setProperty('WEEKLY_REPORT_' + uid, 'TRUE');
+return '✅ 週次まとめを毎週金曜にお届けします！';
+}
+if (message === '週次まとめOFF' || message === '週次まとめoff') {
+PropertiesService.getScriptProperties().setProperty('WEEKLY_REPORT_' + uid, 'FALSE');
+return '🔕 週次まとめの配信を停止しました。再開したい場合は「週次まとめON」と送ってください。';
+}
 if (message === '返信開始') {
 setReplyMode(uid, true);
 clearHistory(uid);
@@ -746,7 +754,18 @@ cal.createAllDayEvent(input.title, s);
 } else {
 cal.createEvent(input.title, s, e, { location: input.location || '', description: input.description || '' });
 }
-return '追加完了: ' + input.title + ' / ' + fmtDate(s, 'M月d日(E) HH:mm') + (input.end ? '〜' + fmtDate(e, 'HH:mm') : '');
+var result = '追加完了: ' + input.title + ' / ' + fmtDate(s, 'M月d日(E) HH:mm') + (input.end ? '〜' + fmtDate(e, 'HH:mm') : '');
+try {
+if (!input.all_day) {
+var existing = cal.getEvents(s, e);
+var conflicts = [];
+for (var ci2 = 0; ci2 < existing.length; ci2++) {
+if (existing[ci2].getTitle() !== input.title) { conflicts.push(existing[ci2].getTitle() + '(' + fmtDate(existing[ci2].getStartTime(), 'HH:mm') + ')'); }
+}
+if (conflicts.length > 0) { result += '\n⚠️ 同じ時間帯に既存の予定があります: ' + conflicts.join(', '); }
+}
+} catch(e2) {}
+return result;
 }
 function toolCalDelete(input) {
 var start = input.date ? new Date(input.date + 'T00:00:00+09:00') : getJSTDate(0);
@@ -1088,6 +1107,92 @@ sheet.getRange(i+1, 5).setValue('FALSE');
 
 }
 }
+// タスク期限切れチェック（1日1回、朝9時台のみ実行）
+try {
+var nowHour = parseInt(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'HH'), 10);
+if (nowHour === 9) {
+var props = PropertiesService.getScriptProperties();
+var todayKey = 'overdue_checked_' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd');
+if (!props.getProperty(todayKey)) {
+props.setProperty(todayKey, 'true');
+var taskSheet = getDataSheet('タスク');
+if (taskSheet.getLastRow() > 1) {
+var taskData = taskSheet.getDataRange().getValues();
+var todayStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+var overdue = [];
+for (var oi = 1; oi < taskData.length; oi++) {
+if (taskData[oi][5] === '完了' || taskData[oi][5] === '削除済み') continue;
+var dueVal = String(taskData[oi][2] || '').trim();
+if (!dueVal) continue;
+var dueDate = dueVal.length >= 10 ? dueVal.substring(0, 10) : dueVal;
+if (dueDate < todayStr) { overdue.push(taskData[oi][4] + '（期限: ' + dueDate + '）'); }
+}
+if (overdue.length > 0) {
+pushToLine(config.USER_ID, '⚠️ 期限切れタスクがあります:\n\n' + overdue.map(function(t,i){return (i+1)+'. '+t;}).join('\n') + '\n\n完了 or 期限変更してください🙏');
+}
+}
+}
+}
+} catch(e) {}
+}
+function weeklyReport() {
+var config = getConfig();
+if (!config.LINE_TOKEN || !config.USER_ID) return;
+var props = PropertiesService.getScriptProperties();
+var weeklyPref = props.getProperty('WEEKLY_REPORT_' + config.USER_ID);
+if (weeklyPref === 'FALSE') return;
+var askCount = parseInt(props.getProperty('WEEKLY_ASK_COUNT_' + config.USER_ID) || '0');
+if (!weeklyPref && askCount >= 2) return;
+var lines = ['📊 今週のまとめ', ''];
+try {
+var taskSheet = getDataSheet('タスク');
+if (taskSheet.getLastRow() > 1) {
+var td = taskSheet.getDataRange().getValues();
+var completed = [], pending = [];
+var weekAgo = new Date(Date.now() - 7 * 86400000);
+for (var i = 1; i < td.length; i++) {
+if (td[i][5] === '削除済み') continue;
+if (td[i][5] === '完了') {
+var addDate = new Date(td[i][1]);
+if (addDate >= weekAgo) completed.push(td[i][4]);
+} else { pending.push(td[i][4]); }
+}
+if (completed.length > 0) {
+lines.push('✅ 完了したタスク（' + completed.length + '件）');
+for (var ci = 0; ci < Math.min(completed.length, 5); ci++) lines.push('・' + completed[ci]);
+if (completed.length > 5) lines.push('  ...他' + (completed.length - 5) + '件');
+lines.push('');
+}
+if (pending.length > 0) {
+lines.push('📋 未完了タスク（' + pending.length + '件）');
+for (var pi = 0; pi < Math.min(pending.length, 5); pi++) lines.push('・' + pending[pi]);
+if (pending.length > 5) lines.push('  ...他' + (pending.length - 5) + '件');
+lines.push('');
+}
+}
+} catch(e) {}
+try {
+var now = new Date();
+var nextMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (8 - now.getDay()) % 7);
+var nextFri = new Date(nextMon.getTime() + 4 * 86400000);
+var events = CalendarApp.getDefaultCalendar().getEvents(nextMon, nextFri);
+if (events.length > 0) {
+lines.push('📅 来週の予定（' + events.length + '件）');
+for (var ei = 0; ei < Math.min(events.length, 5); ei++) {
+lines.push('・' + fmtDate(events[ei].getStartTime(), 'M/d(E) HH:mm') + ' ' + events[ei].getTitle());
+}
+if (events.length > 5) lines.push('  ...他' + (events.length - 5) + '件');
+lines.push('');
+}
+} catch(e) {}
+if (!weeklyPref) {
+lines.push('---');
+lines.push('📩 この週次まとめを毎週届けますか？');
+lines.push('「週次まとめON」→ 毎週届く');
+lines.push('「週次まとめOFF」→ 届かない');
+props.setProperty('WEEKLY_ASK_COUNT_' + config.USER_ID, String(askCount + 1));
+}
+pushToLine(config.USER_ID, lines.join('\n'));
 }
 function toolTaskAdd(input) {
 var sheet = getDataSheet('タスク');
@@ -1667,11 +1772,25 @@ var taskSheet2 = getDataSheet('タスク');
 if (taskSheet2.getLastRow() > 1) {
 var taskData2 = taskSheet2.getDataRange().getValues();
 var todayStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
-var dueTodayTasks = [];
+var tomorrowStr = Utilities.formatDate(new Date(Date.now() + 86400000), 'Asia/Tokyo', 'yyyy-MM-dd');
+var urgent = [], dueTodayTasks = [];
 for (var dti = 1; dti < taskData2.length; dti++) {
 if (taskData2[dti][5] === '完了' || taskData2[dti][5] === '削除済み') continue;
 var dueVal = String(taskData2[dti][2] || '');
-if (dueVal.indexOf(todayStr) !== -1) { dueTodayTasks.push(taskData2[dti][4]); }
+var pri = String(taskData2[dti][3] || '');
+var dueDate = dueVal.length >= 10 ? dueVal.substring(0, 10) : '';
+var isHighPri = (pri === '高' || pri === '緊急');
+var isDueToday = dueDate === todayStr;
+var isDueTomorrow = dueDate === tomorrowStr;
+var isOverdue = dueDate && dueDate < todayStr;
+if (isHighPri && (isDueToday || isDueTomorrow || isOverdue)) {
+urgent.push(taskData2[dti][4] + (isOverdue ? '（期限切れ！）' : isDueToday ? '（今日まで）' : '（明日まで）'));
+} else if (isDueToday) { dueTodayTasks.push(taskData2[dti][4]); }
+}
+if (urgent.length > 0) {
+lines.push('🔥 最優先タスク:');
+for (var ui = 0; ui < urgent.length; ui++) { lines.push('・' + urgent[ui]); }
+lines.push('');
 }
 if (dueTodayTasks.length > 0) {
 lines.push('⚡ 今日が期限のタスク:');
