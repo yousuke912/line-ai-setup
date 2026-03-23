@@ -520,16 +520,16 @@ _T('briefing_setting','ブリーフィング設定',{action:e('start/stop',['sta
 _T('weather','天気取得',{city:s('都市名')},['city']),
 _T('drive_folder_create','フォルダ作成',{name:s('フォルダ名'),parent:s('親フォルダ名')},['name']),
 _T('drive_file_list','ファイル一覧',{folder:s('フォルダ名'),keyword:s('キーワード')}),
-_T('drive_file_delete','ファイル削除',{keyword:s('削除キーワード'),folder:s('フォルダ名')},['keyword']),
+_T('drive_file_delete','ファイル削除。confirm=falseで対象一覧を返す。ユーザー確認後にconfirm=trueで実行',{keyword:s('削除キーワード'),folder:s('フォルダ名'),confirm:{type:'boolean',description:'true=実行/false=確認'}},['keyword']),
 _T('drive_file_move','ファイル移動',{keyword:s('ファイルキーワード'),to_folder:s('移動先フォルダ')},['keyword','to_folder']),
 _T('drive_file_rename','ファイル名変更',{keyword:s('ファイルキーワード'),new_name:s('新しい名前')},['keyword','new_name']),
 _T('drive_file_search','ファイル検索',{keyword:s('キーワード')},['keyword']),
 _T('route_search','経路検索',{from:s('出発地'),to:s('目的地'),mode:e('移動手段',['transit','driving','walking','bicycling']),depart:s('出発時刻')},['from','to']),
 _T('docs_read','ドキュメント読取',{keyword:s('ドキュメント名キーワード')},['keyword']),
-_T('docs_delete','ドキュメント削除',{keyword:s('削除キーワード')},['keyword']),
+_T('docs_delete','ドキュメント削除。confirm=falseで対象を返す。確認後にconfirm=trueで実行',{keyword:s('削除キーワード'),confirm:{type:'boolean',description:'true=実行/false=確認'}},['keyword']),
 _T('sheets_write','スプシ書込',{keyword:s('スプシ名キーワード'),sheet_name:s('シート名'),mode:e('書込モード',['append','update','clear_and_write']),rows:{type:'array',items:{type:'array'},description:'行データ'},headers:{type:'array',items:{type:'string'},description:'ヘッダー'},updates:{type:'array',items:{type:'object'},description:'[{row,col,value}]'}},['keyword','mode']),
 _T('sheets_read','スプシ読取',{keyword:s('スプシ名キーワード'),sheet_name:s('シート名'),max_rows:n('最大行数')},['keyword']),
-_T('sheets_delete','スプシ削除',{keyword:s('削除キーワード')},['keyword']),
+_T('sheets_delete','スプシ削除。confirm=falseで対象を返す。確認後にconfirm=trueで実行',{keyword:s('削除キーワード'),confirm:{type:'boolean',description:'true=実行/false=確認'}},['keyword']),
 _T('url_summarize','URL要約',{url:s('URL')},['url']),
 _T('birthday_reminder','誕生日リマインダー',{name:s('名前'),birthday:s('誕生日MM-DD'),hour:n('通知時刻')},['name','birthday']),
 _T('report_generate','レポート生成',{type:e('種類',['weekly','monthly'])},['type']),
@@ -618,7 +618,7 @@ if (name === 'task_delete') { return toolTaskDelete(input); }
 if (name === 'web_search') { return toolWebSearch(input); }
 if (name === 'briefing_setting') { return toolBriefingSetting(input); }
 if (name === 'weather') { return toolWeather(input); }
-if (name === 'drive_folder_create') { return toolDriveFolderCreate(input); }
+if (name === 'drive_folder_create') { if(uid!=='U029395d561dbfe988aceae03cbf6affc'){return 'フォルダ作成は現在制限されています';} return toolDriveFolderCreate(input); }
 if (name === 'drive_file_list') { return toolDriveFileList(input); }
 if (name === 'drive_file_delete') { return toolDriveFileDelete(input); }
 if (name === 'drive_file_move') { return toolDriveFileMove(input); }
@@ -876,7 +876,7 @@ var id = new Date().getTime().toString();
 var tag = input.tag || '';
 sheet.appendRow([id, getJSTNow(), tag, input.content]);
 try{if(uid==='U029395d561dbfe988aceae03cbf6affc'){var depts=['秘書室','LINE事業','Instagram','note','介護ブログ','コミュニティ','学校コンサル','HP運用'];var cat=tag;if(!cat||depts.indexOf(cat)===-1){var c=getConfig();if(c.ANTHROPIC_KEY){cat=JSON.parse(UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:15,messages:[{role:'user',content:'分類:秘書室,LINE事業,Instagram,note,介護ブログ,コミュニティ,学校コンサル,HP運用\nメモ:'+input.content+'\nカテゴリ名のみ'}]}),muteHttpExceptions:true}).getContentText()).content[0].text.trim();}}if(cat&&depts.indexOf(cat)!==-1){var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');var subs=root.getFoldersByName(cat);var folder=subs.hasNext()?subs.next():root.createFolder(cat);folder.createFile(Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'_memo.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+input.content,MimeType.PLAIN_TEXT);if(!tag){sheet.getRange(sheet.getLastRow(),3).setValue(cat);tag=cat;}}}}catch(e){}
-return '保存完了: ' + input.content + (tag ? ' [' + tag + ']' : '');
+return '保存完了: ' + input.content + (tag ? ' [' + tag + ']' : '') + '\n[SUGGESTION]メモの内容がアクションを含む場合（やるべきこと・期限あり等）、「タスクにも追加しますか？」と簡潔に提案。該当しなければ提案不要。';
 }
 function toolMemoView(input) {
 var sheet = getDataSheet('メモ');
@@ -1096,10 +1096,24 @@ var id = new Date().getTime().toString();
 sheet.appendRow([id, getJSTNow(), input.due || '', input.priority || '中', input.task, '未完了']);
 var result = '追加完了: ' + input.task + ' [優先度:' + (input.priority || '中') + ']' + (input.due ? ' 期限:' + input.due : '');
 if (input.due) {
-result += '\n[SUGGESTION]期限付きタスクです。ユーザーに以下を提案してください:' +
-'\n1.カレンダーにも予定として登録するか' +
-'\n2.期限前日にリマインダーを設定するか' +
-'\n提案は簡潔に1〜2行で。強制せず「〜しますか？」の形で。';
+try {
+var dueStr = input.due;
+if (dueStr.indexOf('+') === -1 && dueStr.indexOf('Z') === -1 && dueStr.indexOf('T') === -1) { dueStr += 'T09:00:00+09:00'; }
+else if (dueStr.indexOf('+') === -1 && dueStr.indexOf('Z') === -1) { dueStr += '+09:00'; }
+var dueDate = new Date(dueStr);
+if (!isNaN(dueDate.getTime())) {
+var calEnd = new Date(dueDate.getTime() + 3600000);
+CalendarApp.getDefaultCalendar().createEvent('📋 ' + input.task, dueDate, calEnd);
+result += '\n📅 カレンダーにも自動登録しました';
+var dayBefore = new Date(dueDate.getTime() - 86400000);
+if (dayBefore.getTime() > Date.now()) {
+var rs = getDataSheet('リマインダー');
+if (rs.getLastRow() === 0) { rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']); }
+rs.appendRow([Date.now() + '', getJSTNow(), dayBefore.getTime(), '明日期限: ' + input.task, 'FALSE', 'none']);
+result += '\n🔔 前日リマインダーも自動設定しました';
+}
+}
+} catch(e) {}
 }
 return result;
 }
@@ -1126,7 +1140,23 @@ var data = sheet.getDataRange().getValues();
 for (var i = 1; i < data.length; i++) {
 if (String(data[i][4] || '').indexOf(input.keyword) !== -1 && data[i][5] !== '完了' && data[i][5] !== '削除済み') {
 sheet.getRange(i+1, 6).setValue('完了');
-return '完了にしました: ' + data[i][4];
+var doneResult = '完了にしました: ' + data[i][4];
+try {
+var remSheet = getDataSheet('リマインダー');
+if (remSheet.getLastRow() > 1) {
+var remData = remSheet.getDataRange().getValues();
+var taskName = String(data[i][4]);
+for (var ri = 1; ri < remData.length; ri++) {
+if (remData[ri][4] === 'TRUE' || remData[ri][4] === 'DELETED') continue;
+if (String(remData[ri][3] || '').indexOf(taskName) !== -1) {
+remSheet.getRange(ri+1, 5).setValue('DELETED');
+doneResult += '\n🔕 関連リマインダーも自動解除しました';
+break;
+}
+}
+}
+} catch(e) {}
+return doneResult;
 }
 }
 return '「' + input.keyword + '」に該当する未完了タスクが見つかりませんでした';
@@ -1190,11 +1220,13 @@ return lines.join('\n');
 }
 function toolDriveFileDelete(input) {
 var PROTECTED_TYPES = ['application/vnd.google-apps.script','application/vnd.google-apps.form'];
-var results = DriveApp.searchFiles('title contains "' + input.keyword + '"');
-var deleted = [];
-while (results.hasNext()) {
+var PROTECTED_IDS = ['1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j'];
+var results = DriveApp.searchFiles('title = "' + input.keyword + '"');
+var targets = [];
+while (results.hasNext() && targets.length < 5) {
 var file = results.next();
 if (PROTECTED_TYPES.indexOf(file.getMimeType()) !== -1) { continue; }
+if (PROTECTED_IDS.indexOf(file.getId()) !== -1) { continue; }
 if (input.folder) {
 var parents = file.getParents();
 var inFolder = false;
@@ -1203,11 +1235,15 @@ if (parents.next().getName() === input.folder) { inFolder = true; break; }
 }
 if (!inFolder) { continue; }
 }
-file.setTrashed(true);
-deleted.push(file.getName());
-if (deleted.length >= 5) { break; }
+targets.push(file);
 }
-if (deleted.length === 0) { return '「' + input.keyword + '」に該当するファイルが見つかりませんでした'; }
+if (targets.length === 0) { return '「' + input.keyword + '」に該当するファイルが見つかりませんでした'; }
+if (!input.confirm) {
+var names = targets.map(function(f){ return '・' + f.getName() + ' (' + f.getMimeType().split('.').pop() + ')'; });
+return '⚠️ 以下のファイルが見つかりました:\n' + names.join('\n') + '\n\n削除してよいかユーザーに確認してください。確認後にconfirm=trueで再度呼んでください。';
+}
+var deleted = [];
+for (var i = 0; i < targets.length; i++) { targets[i].setTrashed(true); deleted.push(targets[i].getName()); }
 return '🗑 ゴミ箱に移動しました:\n' + deleted.join('\n');
 }
 function toolDriveFileMove(input) {
@@ -1319,10 +1355,11 @@ if (text.length > 800) { text = text.slice(0, 800) + '\n...（以下省略）'; 
 return '📄 ' + file.getName() + '\n\n' + text + '\n\nURL: ' + file.getUrl();
 }
 function toolDocsDelete(input) {
-var results = DriveApp.searchFiles('title contains "' + input.keyword + '" and mimeType = "application/vnd.google-apps.document" and trashed = false');
+var results = DriveApp.searchFiles('title = "' + input.keyword + '" and mimeType = "application/vnd.google-apps.document" and trashed = false');
 if (!results.hasNext()) { return '「' + input.keyword + '」というドキュメントが見つかりませんでした'; }
 var file = results.next();
 var name = file.getName();
+if (!input.confirm) { return '⚠️ ドキュメント「' + name + '」が見つかりました。削除してよいかユーザーに確認してください。確認後にconfirm=trueで再度呼んでください。'; }
 file.setTrashed(true);
 return '🗑 ドキュメントをゴミ箱に移動しました: ' + name;
 }
@@ -1380,10 +1417,11 @@ return '✅ シートを更新しました（' + dataRows.length + '行）\nURL:
 return '❌ modeが不正です（append/update/clear_and_write）';
 }
 function toolSheetsDelete(input) {
-var results = DriveApp.searchFiles('title contains "' + input.keyword + '" and mimeType = "application/vnd.google-apps.spreadsheet" and trashed = false');
+var results = DriveApp.searchFiles('title = "' + input.keyword + '" and mimeType = "application/vnd.google-apps.spreadsheet" and trashed = false');
 if (!results.hasNext()) { return '「' + input.keyword + '」というスプレッドシートが見つかりませんでした'; }
 var file = results.next();
 var name = file.getName();
+if (!input.confirm) { return '⚠️ スプレッドシート「' + name + '」が見つかりました。削除してよいかユーザーに確認してください。確認後にconfirm=trueで再度呼んでください。'; }
 file.setTrashed(true);
 return '🗑 スプレッドシートをゴミ箱に移動しました: ' + name;
 }
@@ -1620,6 +1658,24 @@ for (var tri = 0; tri < Math.min(todayReminders.length, 5); tri++) {
 lines.push((tri+1) + '. ' + Utilities.formatDate(todayReminders[tri].time, 'Asia/Tokyo', 'HH:mm') + ' ' + todayReminders[tri].text);
 }
 if (todayReminders.length > 5) { lines.push(' ...他' + (todayReminders.length - 5) + '件'); }
+lines.push('');
+}
+}
+} catch(e) {}
+try {
+var taskSheet2 = getDataSheet('タスク');
+if (taskSheet2.getLastRow() > 1) {
+var taskData2 = taskSheet2.getDataRange().getValues();
+var todayStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+var dueTodayTasks = [];
+for (var dti = 1; dti < taskData2.length; dti++) {
+if (taskData2[dti][5] === '完了' || taskData2[dti][5] === '削除済み') continue;
+var dueVal = String(taskData2[dti][2] || '');
+if (dueVal.indexOf(todayStr) !== -1) { dueTodayTasks.push(taskData2[dti][4]); }
+}
+if (dueTodayTasks.length > 0) {
+lines.push('⚡ 今日が期限のタスク:');
+for (var ddi = 0; ddi < dueTodayTasks.length; ddi++) { lines.push('・' + dueTodayTasks[ddi]); }
 lines.push('');
 }
 }
