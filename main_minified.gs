@@ -425,6 +425,7 @@ basePrompt +
 '\n・前の会話を踏まえて行動してください' +
 '\n・削除・変更は対象を確認してから実行してください' +
 '\n・曖昧な指示は文脈から意図を推測して実行してください' +
+'\n・ツール結果に[SUGGESTION]がある場合、その指示に従ってユーザーに提案してください。[SUGGESTION]タグ自体はユーザーに見せないこと。' +
 '\n・【重要】設定された口調を会話中ずっと維持すること。ユーザーが「口調変更」「口調を変えて」と明示しない限り、絶対に口調を変えないこと。' +
 announceTxt +
 '\n・現在の日時: ' + getJSTNow();
@@ -661,6 +662,7 @@ line += '\n ' + urls.join('\n ');
 }
 lines.push(line);
 }
+lines.push('\n[SUGGESTION]メールに日時・締切・会議の情報があれば、ユーザーに「カレンダーに登録しますか？」「タスクに追加しますか？」と簡潔に提案してください。該当がなければ提案不要。');
 return lines.join('\n');
 }
 function toolGmailSend(input) {
@@ -1085,7 +1087,14 @@ var sheet = getDataSheet('タスク');
 if (sheet.getLastRow() === 0) { sheet.appendRow(['ID', '追加日時', '期限', '優先度', 'タスク', '状態']); }
 var id = new Date().getTime().toString();
 sheet.appendRow([id, getJSTNow(), input.due || '', input.priority || '中', input.task, '未完了']);
-return '追加完了: ' + input.task + ' [優先度:' + (input.priority || '中') + ']' + (input.due ? ' 期限:' + input.due : '');
+var result = '追加完了: ' + input.task + ' [優先度:' + (input.priority || '中') + ']' + (input.due ? ' 期限:' + input.due : '');
+if (input.due) {
+result += '\n[SUGGESTION]期限付きタスクです。ユーザーに以下を提案してください:' +
+'\n1.カレンダーにも予定として登録するか' +
+'\n2.期限前日にリマインダーを設定するか' +
+'\n提案は簡潔に1〜2行で。強制せず「〜しますか？」の形で。';
+}
+return result;
 }
 function toolTaskView(input) {
 var sheet = getDataSheet('タスク');
@@ -1566,7 +1575,7 @@ if (sheet.getLastRow() > 1) {
 var data = sheet.getDataRange().getValues();
 var pending = [];
 for (var ti = 1; ti < data.length; ti++) {
-if (data[ti][5] !== '完了') { pending.push(data[ti]); }
+if (data[ti][5] !== '完了' && data[ti][5] !== '削除済み') { pending.push(data[ti]); }
 }
 if (pending.length === 0) {
 lines.push('✅ 未完了タスクはありません！');
@@ -1584,6 +1593,35 @@ lines.push('✅ タスクはまだありません');
 }
 } catch(e) { lines.push('✅ タスクの取得に失敗しました'); }
 lines.push('');
+try {
+var remSheet = getDataSheet('リマインダー');
+if (remSheet.getLastRow() > 1) {
+var remData = remSheet.getDataRange().getValues();
+var todayReminders = [];
+var todayStart2 = new Date(Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd') + 'T00:00:00+09:00').getTime();
+var todayEnd2 = todayStart2 + 86400000;
+for (var ri = 1; ri < remData.length; ri++) {
+if (remData[ri][4] === 'TRUE' || remData[ri][4] === true || remData[ri][4] === 'DELETED') { continue; }
+var rawDtB = remData[ri][2];
+var dtB;
+if (typeof rawDtB === 'number' && rawDtB > 1000000000000) { dtB = new Date(rawDtB); }
+else if (rawDtB instanceof Date) { dtB = rawDtB; }
+else { var sB = String(rawDtB || '').trim(); if (/^\d{13}$/.test(sB)) { dtB = new Date(parseInt(sB)); } else { if (sB.indexOf('+') === -1 && sB.indexOf('Z') === -1) { sB += '+09:00'; } dtB = new Date(sB); } }
+if (dtB && dtB.getTime() >= todayStart2 && dtB.getTime() < todayEnd2) {
+todayReminders.push({ text: remData[ri][3], time: dtB });
+}
+}
+if (todayReminders.length > 0) {
+todayReminders.sort(function(a,b){ return a.time - b.time; });
+lines.push('🔔 今日のリマインダー（' + todayReminders.length + '件）');
+for (var tri = 0; tri < Math.min(todayReminders.length, 5); tri++) {
+lines.push((tri+1) + '. ' + Utilities.formatDate(todayReminders[tri].time, 'Asia/Tokyo', 'HH:mm') + ' ' + todayReminders[tri].text);
+}
+if (todayReminders.length > 5) { lines.push(' ...他' + (todayReminders.length - 5) + '件'); }
+lines.push('');
+}
+}
+} catch(e) {}
 lines.push('今日も頑張りましょう💪');
 pushToLine(config.USER_ID, lines.join('\n'));
 
