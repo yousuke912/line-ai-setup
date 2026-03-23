@@ -302,7 +302,9 @@ var isReplyMode = getReplyMode(uid);
 var tonePrompt = getTonePrompt(uid, props);
 if (tonePrompt && remoteConfig) {
 remoteConfig = JSON.parse(JSON.stringify(remoteConfig));
-remoteConfig.system_prompt = (remoteConfig.system_prompt || '') + tonePrompt;
+var sp = remoteConfig.system_prompt || '';
+sp = sp.replace(/丁寧で簡潔な日本語/g, '簡潔な日本語').replace(/丁寧・親しみやすい/g, '');
+remoteConfig.system_prompt = sp + tonePrompt;
 }
 history.push({ role: 'user', content: message });
 var maxLoops = 3;
@@ -423,6 +425,7 @@ basePrompt +
 '\n・前の会話を踏まえて行動してください' +
 '\n・削除・変更は対象を確認してから実行してください' +
 '\n・曖昧な指示は文脈から意図を推測して実行してください' +
+'\n・【重要】設定された口調を会話中ずっと維持すること。ユーザーが「口調変更」「口調を変えて」と明示しない限り、絶対に口調を変えないこと。' +
 announceTxt +
 '\n・現在の日時: ' + getJSTNow();
 }
@@ -505,7 +508,7 @@ _T('task_add','タスク追加',{task:s('内容'),due:s('期限date'),priority:e
 _T('task_view','タスク一覧',{show_done:b('完了済み表示')}),
 _T('task_done','タスク完了',{keyword:s('キーワード')},['keyword']),
 _T('task_delete','タスク削除',{keyword:s('キーワード')},['keyword']),
-_T('set_tone','口調設定。口調変更の要望があれば必ず呼ぶ',{tone:s('口調')},['tone']),
+_T('set_tone','口調設定。ユーザーが「口調変更」「口調を変えて」と明示的に要望した場合のみ呼ぶ。会話内容に応じて自動で呼ばないこと',{tone:s('口調')},['tone']),
 _T('web_search','情報を検索',{query:s('クエリ')},['query']),
 _T('briefing_setting','ブリーフィング設定',{action:e('start/stop',['start','stop']),hour:n('送信時刻')},['action']),
 _T('weather','天気取得',{city:s('都市名')},['city']),
@@ -1680,17 +1683,15 @@ function setTone(uid, tone, props) {
 }
 function getTonePrompt(uid, props) {
 var tone = getTone(uid, props);
-if (!tone) { return ''; }
+if (!tone || tone === '丁寧' || tone === '1') { return ''; }
 var presets = {
-'1': '',
-'丁寧': '',
-'2': '\n・タメ口・絵文字多めで話しかけて。',
-'フレンドリー': '\n・タメ口・絵文字多めで話しかけて。',
-'3': '\n・ビジネス敬語で簡潔に。絵文字なし。',
-'ビジネス': '\n・ビジネス敬語で簡潔に。絵文字なし。',
+'2': '\n\n【口調ルール（最優先で厳守）】\nタメ口で話して。敬語禁止。語尾は「〜だよ」「〜だね」「〜しよう！」。絵文字を毎回2〜3個使って。親しい友達に話すように。この口調を会話中ずっと維持すること。',
+'フレンドリー': '\n\n【口調ルール（最優先で厳守）】\nタメ口で話して。敬語禁止。語尾は「〜だよ」「〜だね」「〜しよう！」。絵文字を毎回2〜3個使って。親しい友達に話すように。この口調を会話中ずっと維持すること。',
+'3': '\n\n【口調ルール（最優先で厳守）】\nビジネス敬語で簡潔に。絵文字なし。「です・ます」調。冗長な表現を避け要点のみ。この口調を会話中ずっと維持すること。',
+'ビジネス': '\n\n【口調ルール（最優先で厳守）】\nビジネス敬語で簡潔に。絵文字なし。「です・ます」調。冗長な表現を避け要点のみ。この口調を会話中ずっと維持すること。',
 };
 if (presets[tone] !== undefined) { return presets[tone]; }
-return '\n・口調: ' + tone;
+return '\n\n【口調ルール（最優先で厳守）】\n口調:' + tone + '。この口調を会話中ずっと維持すること。';
 }
 function toolSetTone(input, uid) {
 if (!uid) return '口調設定に失敗しました';
