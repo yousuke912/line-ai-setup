@@ -573,14 +573,16 @@ break;
 }
 }
 }
+var ALWAYS_INCLUDE = {calendar_view:1,calendar_add:1,task_add:1,task_view:1,task_done:1,memo_add:1,memo_view:1,reminder_add:1,reminder_view:1,briefing_setting:1};
+for(var ai in ALWAYS_INCLUDE){needed[ai]=true;}
 var matched = Object.keys(needed);
 if (matched.length > 0) {
 return all.filter(function(t){ return needed[t.name]; });
 }
 if (msg.indexOf('？') !== -1 || msg.indexOf('?') !== -1 || msg.indexOf('教えて') !== -1 || msg.indexOf('って何') !== -1 || msg.indexOf('とは') !== -1 || msg.indexOf('知りたい') !== -1) {
-return all.filter(function(t){ return t.name === 'web_search'; });
+return all.filter(function(t){ return needed[t.name] || t.name === 'web_search'; });
 }
-return [];
+return all.filter(function(t){ return ALWAYS_INCLUDE[t.name]; });
 }
 function getRegisteredToolNames() {
 var groups = _G();
