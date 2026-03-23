@@ -408,6 +408,15 @@ continue;
 cleanHistory.push(h);
 }
 saveHistory(uid, cleanHistory);
+// AIログ記録（CMS連携時のみ）
+try {
+var _cmsProps = PropertiesService.getScriptProperties();
+var _cmsClientId = _cmsProps.getProperty('CMS_CLIENT_ID');
+if (_cmsClientId) {
+var _logUrl = _cmsProps.getProperty('CMS_SUPABASE_URL') + '/rest/v1/ai_logs';
+UrlFetchApp.fetch(_logUrl, { method:'post', contentType:'application/json', headers:{'apikey':_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Authorization':'Bearer '+_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Prefer':'return=minimal'}, payload:JSON.stringify({account_id:_cmsClientId,user_id:uid,user_message:message.substring(0,500),ai_response:(finalReply||'').substring(0,500)}), muteHttpExceptions:true });
+}
+} catch(e) {}
 if (demoWarning) {
 finalReply = finalReply + demoWarning;
 }
@@ -452,6 +461,24 @@ basePrompt +
 announceTxt +
 '\n・現在の日時: ' + getJSTNow();
 }
+// 思いやりルール追加（CMS連携時）
+try {
+var cmsSettings = _getCmsSettings();
+if (cmsSettings && cmsSettings.omoiyari_rules) {
+var oR = cmsSettings.omoiyari_rules;
+var oRules = [];
+if (oR.no_negative) oRules.push('否定語（できません/わかりません）を使わず、肯定的な代替表現を使う');
+if (oR.read_between_lines) oRules.push('質問の行間を読み、本当のニーズを想像して先回りで情報を出す');
+if (oR.offer_choices) oRules.push('曖昧な質問には2〜3個の選択肢を提示する');
+if (oR.warm_words) oRules.push('機械的でなく温かみのある表現を使う。「いい質問ですね」「なるほど」等');
+if (oR.honest_handoff) oRules.push('わからないことは正直に伝え、必ず次のアクションを示す。適当に答えない');
+if (oR.positive_reframe) oRules.push('ネガティブな状況もポジティブに言い換える。「無理です」→「こうすればいけます」');
+if (oR.open_door) oRules.push('応答の最後に「いつでも聞いてくださいね」等の一言を添える');
+if (oRules.length > 0) {
+systemPrompt += '\n\n【応答スタイル】\n' + oRules.map(function(r){return '・'+r;}).join('\n');
+}
+}
+} catch(e) {}
 var lastMsg = '';
 for (var hi = history.length - 1; hi >= 0; hi--) {
 if (history[hi].role === 'user' && typeof history[hi].content === 'string') {
