@@ -169,6 +169,9 @@ if (ev.type !== 'message' || ev.message.type !== 'text') { continue; }
 var uid = ev.source.userId;
 var message = ev.message.text.trim();
 saveUserId(uid);
+var _cmsStatus = _getCmsAccountStatus();
+if (_cmsStatus === 'suspended') { replyToLine(ev.replyToken, '現在ご利用いただけません。お支払い状況をご確認ください。'); continue; }
+if (_cmsStatus === 'cancelled') { replyToLine(ev.replyToken, 'このアカウントは解約済みです。'); continue; }
 if (message === 'ヘルプ' || message === 'help') {
 var carouselSent = sendCarousel(ev.replyToken);
 if (!carouselSent) { replyToLine(ev.replyToken, helpText()); }
@@ -2093,6 +2096,39 @@ var config = getConfig();
 }
 function clearCodeCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
-
-
+}
+function _getCmsAccountStatus() {
+var props = PropertiesService.getScriptProperties();
+var clientId = props.getProperty('CMS_CLIENT_ID');
+if (!clientId) { return 'active'; }
+var cache = CacheService.getScriptCache();
+var cached = cache.get('cms_status_' + clientId);
+if (cached) { return cached; }
+try {
+var url = props.getProperty('CMS_SUPABASE_URL') + '/rest/v1/accounts?id=eq.' + clientId + '&select=status';
+var res = UrlFetchApp.fetch(url, { headers: { 'apikey': props.getProperty('CMS_SUPABASE_KEY'), 'Authorization': 'Bearer ' + props.getProperty('CMS_SUPABASE_KEY') }, muteHttpExceptions: true });
+if (res.getResponseCode() !== 200) { return 'active'; }
+var data = JSON.parse(res.getContentText());
+var st = (data && data[0]) ? data[0].status : 'active';
+try { cache.put('cms_status_' + clientId, st, 60); } catch(e) {}
+return st;
+} catch(e) { return 'active'; }
+}
+function _getCmsSettings() {
+var props = PropertiesService.getScriptProperties();
+var clientId = props.getProperty('CMS_CLIENT_ID');
+if (!clientId) { return null; }
+var cache = CacheService.getScriptCache();
+var cached = cache.get('cms_settings_' + clientId);
+if (cached) { try { return JSON.parse(cached); } catch(e) {} }
+try {
+var url = props.getProperty('CMS_SUPABASE_URL') + '/rest/v1/account_settings?account_id=eq.' + clientId + '&select=*';
+var res = UrlFetchApp.fetch(url, { headers: { 'apikey': props.getProperty('CMS_SUPABASE_KEY'), 'Authorization': 'Bearer ' + props.getProperty('CMS_SUPABASE_KEY') }, muteHttpExceptions: true });
+if (res.getResponseCode() !== 200) { return null; }
+var data = JSON.parse(res.getContentText());
+if (!data || data.length === 0) { return null; }
+var settings = data[0];
+try { cache.put('cms_settings_' + clientId, JSON.stringify(settings), 60); } catch(e) {}
+return settings;
+} catch(e) { return null; }
 }
