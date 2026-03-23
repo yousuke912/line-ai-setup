@@ -561,7 +561,7 @@ _T('task_done','タスク完了',{keyword:s('キーワード')},['keyword']),
 _T('task_delete','タスク削除',{keyword:s('キーワード')},['keyword']),
 _T('set_tone','口調設定。ユーザーが「口調変更」「口調を変えて」と明示的に要望した場合のみ呼ぶ。会話内容に応じて自動で呼ばないこと',{tone:s('口調')},['tone']),
 _T('web_search','情報を検索',{query:s('クエリ')},['query']),
-_T('briefing_setting','ブリーフィング設定',{action:e('start/stop',['start','stop']),hour:n('送信時刻')},['action']),
+_T('briefing_setting','ブリーフィング設定。ニュース配信はnews_topicに検索キーワードを設定',{action:e('start/stop',['start','stop']),hour:n('送信時刻'),news_topic:s('ニュース検索キーワード。停止はoff')},['action']),
 _T('weather','天気取得',{city:s('都市名')},['city']),
 _T('drive_folder_create','フォルダ作成',{name:s('フォルダ名'),parent:s('親フォルダ名')},['name']),
 _T('drive_file_list','ファイル一覧',{folder:s('フォルダ名'),keyword:s('キーワード')}),
@@ -596,7 +596,7 @@ drive: ['ドライブ','フォルダ','ファイル','移動','削除','検索',
 memo: ['メモ','覚え','記録'],
 task: ['タスク','やること','todo','完了','締め切り'],
 reminder: ['リマインダー','通知','リマインド','誕生日','毎日','毎週','毎月','毎年','第'],
-briefing: ['ブリーフィング','朝のスケジュール','朝の予定','毎朝','朝に','朝5時','朝6時','朝7時','朝8時','朝9時','予定を教えて','タスクを教えて','メモを教えて','定期的に教えて'],
+briefing: ['ブリーフィング','朝のスケジュール','朝の予定','毎朝','朝に','朝5時','朝6時','朝7時','朝8時','朝9時','予定を教えて','タスクを教えて','メモを教えて','定期的に教えて','ニュース','ニュース配信','ニュース送って','最新ニュース'],
 search: ['調べ','検索','最新','ニュース','情報'],
 weather: ['天気','気温','雨','晴れ','曇り','予報'],
 route: ['経路','乗換','バス','電車','ホテル','宿','行き方'],
@@ -1861,6 +1861,14 @@ if (triggers[i].getHandlerFunction() === 'morningBriefing') { ScriptApp.deleteTr
 }
 return '朝のスケジュール確認を停止しました。\n再開したい場合は「朝のスケジュール確認を〇時に設定して」と送ってください。';
 }
+if (input.news_topic !== undefined) {
+if (input.news_topic === '' || input.news_topic === 'off' || input.news_topic === 'OFF') {
+props.deleteProperty('BRIEFING_NEWS_TOPIC');
+return '📰 ニュース配信を停止しました';
+}
+props.setProperty('BRIEFING_NEWS_TOPIC', input.news_topic);
+return '📰 毎朝のブリーフィングに「' + input.news_topic + '」のニュースを追加しました！';
+}
 var hour = input.hour !== undefined ? input.hour : 7;
 props.setProperty('BRIEFING_HOUR', String(hour));
 props.setProperty('BRIEFING_ENABLED', 'TRUE');
@@ -1992,6 +2000,25 @@ lines.push('');
 if (dueTodayTasks.length > 0) {
 lines.push('⚡ 今日が期限のタスク:');
 for (var ddi = 0; ddi < dueTodayTasks.length; ddi++) { lines.push('・' + dueTodayTasks[ddi]); }
+lines.push('');
+}
+}
+} catch(e) {}
+try {
+var newsTopic = PropertiesService.getScriptProperties().getProperty('BRIEFING_NEWS_TOPIC');
+if (newsTopic) {
+var encoded = encodeURIComponent(newsTopic + ' 最新');
+var rssUrl = 'https://news.google.com/rss/search?q=' + encoded + '&hl=ja&gl=JP&ceid=JP:ja';
+var rssText = UrlFetchApp.fetch(rssUrl, { muteHttpExceptions: true }).getContentText();
+var itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g);
+if (itemMatches && itemMatches.length > 0) {
+lines.push('📰 ' + newsTopic + 'ニュース');
+for (var ni = 0; ni < Math.min(itemMatches.length, 5); ni++) {
+var nItem = itemMatches[ni];
+var nTitle = (nItem.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '';
+nTitle = nTitle.replace(/<!\[CDATA\[|\]\]>/g, '').trim().replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+if (nTitle) lines.push((ni+1) + '. ' + nTitle);
+}
 lines.push('');
 }
 }
