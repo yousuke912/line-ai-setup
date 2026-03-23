@@ -410,14 +410,13 @@ continue;
 cleanHistory.push(h);
 }
 saveHistory(uid, cleanHistory);
-// AIログ記録（CMS連携時のみ）
+// AIログ記録（全ユーザー匿名記録）
 try {
-var _cmsProps = PropertiesService.getScriptProperties();
-var _cmsClientId = _cmsProps.getProperty('CMS_CLIENT_ID');
-if (_cmsClientId) {
-var _logUrl = _cmsProps.getProperty('CMS_SUPABASE_URL') + '/rest/v1/ai_logs';
-UrlFetchApp.fetch(_logUrl, { method:'post', contentType:'application/json', headers:{'apikey':_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Authorization':'Bearer '+_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Prefer':'return=minimal'}, payload:JSON.stringify({account_id:_cmsClientId,user_id:uid,user_message:message.substring(0,500),ai_response:(finalReply||'').substring(0,500),tools_used:_usedTools.length>0?_usedTools:null}), muteHttpExceptions:true });
-}
+var _cmsProps2 = PropertiesService.getScriptProperties();
+var _cmsClientId2 = _cmsProps2.getProperty('CMS_CLIENT_ID') || null;
+var _sbUrl2 = _cmsProps2.getProperty('CMS_SUPABASE_URL') || 'https://dovnjfbayzxpisgqkqvq.supabase.co';
+var _sbKey2 = _cmsProps2.getProperty('CMS_SUPABASE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvdm5qZmJheXp4cGlzZ3FrcXZxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDIzMjI5MCwiZXhwIjoyMDg5ODA4MjkwfQ.5eGGrjrVAoRLDgsYdS-dzRXmY6MnntZbYyqabezIPtc';
+UrlFetchApp.fetch(_sbUrl2 + '/rest/v1/ai_logs', { method:'post', contentType:'application/json', headers:{'apikey':_sbKey2,'Authorization':'Bearer '+_sbKey2,'Prefer':'return=minimal'}, payload:JSON.stringify({account_id:_cmsClientId2,user_id:uid,user_message:message.substring(0,500),ai_response:(finalReply||'').substring(0,500),tools_used:_usedTools.length>0?_usedTools:null}), muteHttpExceptions:true });
 } catch(e) {}
 if (demoWarning) {
 finalReply = finalReply + demoWarning;
