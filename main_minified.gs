@@ -1187,10 +1187,12 @@ if (folderCount + fileCount === 0) { return (input.folder || 'マイドライブ
 return lines.join('\n');
 }
 function toolDriveFileDelete(input) {
+var PROTECTED_TYPES = ['application/vnd.google-apps.script','application/vnd.google-apps.form'];
 var results = DriveApp.searchFiles('title contains "' + input.keyword + '"');
 var deleted = [];
 while (results.hasNext()) {
 var file = results.next();
+if (PROTECTED_TYPES.indexOf(file.getMimeType()) !== -1) { continue; }
 if (input.folder) {
 var parents = file.getParents();
 var inFolder = false;
@@ -1201,13 +1203,6 @@ if (!inFolder) { continue; }
 }
 file.setTrashed(true);
 deleted.push(file.getName());
-if (deleted.length >= 5) { break; }
-}
-var folderResults = DriveApp.searchFolders('title contains "' + input.keyword + '"');
-while (folderResults.hasNext()) {
-var f = folderResults.next();
-f.setTrashed(true);
-deleted.push(f.getName() + '（フォルダ）');
 if (deleted.length >= 5) { break; }
 }
 if (deleted.length === 0) { return '「' + input.keyword + '」に該当するファイルが見つかりませんでした'; }
