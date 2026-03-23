@@ -1817,6 +1817,18 @@ ScriptApp.newTrigger('morningBriefing')
 .everyDays(1)
 .create();
 }
+function setupWeeklyReportTrigger() {
+var triggers = ScriptApp.getProjectTriggers();
+for (var i = 0; i < triggers.length; i++) {
+if (triggers[i].getHandlerFunction() === 'weeklyReport') { ScriptApp.deleteTrigger(triggers[i]); }
+}
+ScriptApp.newTrigger('weeklyReport')
+.timeBased()
+.onWeekDay(ScriptApp.WeekDay.FRIDAY)
+.atHour(17)
+.create();
+Logger.log('✅ 週次まとめトリガーを設定しました（毎週金曜17時）');
+}
 function toolWeather(input) {
 var cityCoords = {
 '東京':{lat:35.6762,lon:139.6503},'大阪':{lat:34.6937,lon:135.5023},
