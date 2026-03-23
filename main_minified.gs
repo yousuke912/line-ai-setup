@@ -328,6 +328,7 @@ remoteConfig.system_prompt = sp + tonePrompt;
 history.push({ role: 'user', content: message });
 var maxLoops = 3;
 var finalReply = '';
+var _usedTools = [];
 for (var loop = 0; loop < maxLoops; loop++) {
 var response = callClaudeWithTools(config.ANTHROPIC_KEY, history, isReplyMode, remoteConfig);
 if (!response) { finalReply = 'エラーが発生しました。もう一度お試しください。'; break; }
@@ -369,6 +370,7 @@ if (content[ti].type !== 'tool_use') { continue; }
 var toolName = content[ti].name;
 var toolInput = content[ti].input;
 var toolCallId = content[ti].id;
+_usedTools.push(toolName);
 var toolResult = executeTool(toolName, toolInput, uid);
 var trimmedResult = typeof toolResult === 'string' && toolResult.length > 1500
 ? toolResult.slice(0, 1500) + '…（省略）'
@@ -414,7 +416,7 @@ var _cmsProps = PropertiesService.getScriptProperties();
 var _cmsClientId = _cmsProps.getProperty('CMS_CLIENT_ID');
 if (_cmsClientId) {
 var _logUrl = _cmsProps.getProperty('CMS_SUPABASE_URL') + '/rest/v1/ai_logs';
-UrlFetchApp.fetch(_logUrl, { method:'post', contentType:'application/json', headers:{'apikey':_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Authorization':'Bearer '+_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Prefer':'return=minimal'}, payload:JSON.stringify({account_id:_cmsClientId,user_id:uid,user_message:message.substring(0,500),ai_response:(finalReply||'').substring(0,500)}), muteHttpExceptions:true });
+UrlFetchApp.fetch(_logUrl, { method:'post', contentType:'application/json', headers:{'apikey':_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Authorization':'Bearer '+_cmsProps.getProperty('CMS_SUPABASE_KEY'),'Prefer':'return=minimal'}, payload:JSON.stringify({account_id:_cmsClientId,user_id:uid,user_message:message.substring(0,500),ai_response:(finalReply||'').substring(0,500),tools_used:_usedTools.length>0?_usedTools:null}), muteHttpExceptions:true });
 }
 } catch(e) {}
 if (demoWarning) {
@@ -1315,6 +1317,80 @@ lines.push('「週次まとめOFF」→ 届かない');
 props.setProperty('WEEKLY_ASK_COUNT_' + config.USER_ID, String(askCount + 1));
 }
 pushToLine(config.USER_ID, lines.join('\n'));
+}
+function analyzeAiLogs() {
+var props = PropertiesService.getScriptProperties();
+var sbUrl = props.getProperty('CMS_SUPABASE_URL');
+var sbKey = props.getProperty('CMS_SUPABASE_KEY');
+var apiKey = props.getProperty('ANTHROPIC_API_KEY');
+if (!sbUrl || !sbKey || !apiKey) return;
+var now = new Date();
+var weekEnd = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+var weekStart = Utilities.formatDate(new Date(now.getTime() - 7 * 86400000), 'Asia/Tokyo', 'yyyy-MM-dd');
+try {
+var logsRes = UrlFetchApp.fetch(sbUrl + '/rest/v1/ai_logs?created_at=gte.' + weekStart + 'T00:00:00&created_at=lt.' + weekEnd + 'T23:59:59&order=created_at.desc&limit=200', { headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey } });
+var logs = JSON.parse(logsRes.getContentText());
+if (logs.length === 0) return;
+var toolCount = {};
+var accountMessages = {};
+for (var i = 0; i < logs.length; i++) {
+var log = logs[i];
+var aid = log.account_id || 'unknown';
+if (!accountMessages[aid]) accountMessages[aid] = [];
+accountMessages[aid].push({ q: log.user_message, a: log.ai_response });
+if (log.tools_used) {
+for (var t = 0; t < log.tools_used.length; t++) {
+toolCount[log.tools_used[t]] = (toolCount[log.tools_used[t]] || 0) + 1;
+}
+}
+}
+var sampleLogs = logs.slice(0, 50).map(function(l) { return 'Q:' + (l.user_message || '').substring(0, 100) + ' A:' + (l.ai_response || '').substring(0, 100); }).join('\n');
+var analysisPrompt = '以下はLINE AI秘書の1週間分のやりとりログ（最大50件）です。分析してJSON形式で回答してください。\n\n' +
+'{"top_questions":["よく聞かれる質問TOP5"],"failed_patterns":["AIがうまく答えられなかったパターン"],"keyword_suggestions":["selectToolsに追加すべきキーワード（ツール名:キーワード形式）"],"prompt_suggestions":["system_promptに追加すべき指示"]}\n\nログ:\n' + sampleLogs;
+var aiRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', { method: 'post', contentType: 'application/json', headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }, payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: analysisPrompt }] }), muteHttpExceptions: true });
+var aiData = JSON.parse(aiRes.getContentText());
+var analysisText = aiData.content && aiData.content[0] ? aiData.content[0].text : '{}';
+var jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+var analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+var hourDist = {};
+for (var hi = 0; hi < logs.length; hi++) {
+var h = new Date(logs[hi].created_at).getHours();
+hourDist[h] = (hourDist[h] || 0) + 1;
+}
+var globalPayload = { week_start: weekStart, week_end: weekEnd, total_messages: logs.length, total_accounts: Object.keys(accountMessages).length, tool_usage: toolCount, top_questions: analysis.top_questions || [], failed_patterns: analysis.failed_patterns || [], keyword_suggestions: analysis.keyword_suggestions || [], prompt_suggestions: analysis.prompt_suggestions || [] };
+UrlFetchApp.fetch(sbUrl + '/rest/v1/ai_logs_global_summary', { method: 'post', contentType: 'application/json', headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey, 'Prefer': 'return=minimal' }, payload: JSON.stringify(globalPayload), muteHttpExceptions: true });
+var accountIds = Object.keys(accountMessages);
+for (var ai2 = 0; ai2 < accountIds.length; ai2++) {
+var accId = accountIds[ai2];
+if (accId === 'unknown') continue;
+var accLogs = logs.filter(function(l) { return l.account_id === accId; });
+var accToolCount = {};
+for (var at = 0; at < accLogs.length; at++) {
+if (accLogs[at].tools_used) { for (var at2 = 0; at2 < accLogs[at].tools_used.length; at2++) { accToolCount[accLogs[at].tools_used[at2]] = (accToolCount[accLogs[at].tools_used[at2]] || 0) + 1; } }
+}
+var accPayload = { account_id: accId, week_start: weekStart, week_end: weekEnd, total_messages: accLogs.length, tool_usage: accToolCount, top_questions: analysis.top_questions || [], failed_patterns: analysis.failed_patterns || [], suggestions: analysis.prompt_suggestions || [], hour_distribution: hourDist, satisfaction_rate: 0 };
+UrlFetchApp.fetch(sbUrl + '/rest/v1/ai_logs_summary', { method: 'post', contentType: 'application/json', headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey, 'Prefer': 'return=minimal' }, payload: JSON.stringify(accPayload), muteHttpExceptions: true });
+}
+var kishUid = 'U029395d561dbfe988aceae03cbf6affc';
+var config2 = getConfig();
+if (config2.LINE_TOKEN) {
+var summaryMsg = '📊 AIログ週次分析完了\n\n' +
+'期間: ' + weekStart + ' 〜 ' + weekEnd + '\n' +
+'総メッセージ数: ' + logs.length + '件\n' +
+'アカウント数: ' + Object.keys(accountMessages).length + '\n\n';
+if (analysis.failed_patterns && analysis.failed_patterns.length > 0) {
+summaryMsg += '⚠️ 改善が必要なパターン:\n';
+for (var fp = 0; fp < Math.min(analysis.failed_patterns.length, 3); fp++) { summaryMsg += '・' + analysis.failed_patterns[fp] + '\n'; }
+}
+if (analysis.keyword_suggestions && analysis.keyword_suggestions.length > 0) {
+summaryMsg += '\n💡 キーワード追加提案:\n';
+for (var ks = 0; ks < Math.min(analysis.keyword_suggestions.length, 3); ks++) { summaryMsg += '・' + analysis.keyword_suggestions[ks] + '\n'; }
+}
+pushToLine(kishUid, summaryMsg);
+}
+} catch(e) {
+try { var kishUid2 = 'U029395d561dbfe988aceae03cbf6affc'; var config3 = getConfig(); if (config3.LINE_TOKEN) pushToLine(kishUid2, '⚠️ AIログ分析エラー: ' + e.message); } catch(e2) {}
+}
 }
 function toolTaskAdd(input) {
 var sheet = getDataSheet('タスク');
