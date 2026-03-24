@@ -801,10 +801,14 @@ end = new Date(today.getFullYear(), today.getMonth(), today.getDate()+7, 23, 59,
 label = '今週';
 }
 var events = [];
+var seenIdsCV = {};
 var allCals = CalendarApp.getAllCalendars();
 for (var ci = 0; ci < allCals.length; ci++) {
 var ces = allCals[ci].getEvents(start, end);
-for (var ei = 0; ei < ces.length; ei++) { events.push(ces[ei]); }
+for (var ei = 0; ei < ces.length; ei++) {
+var evIdCV = ces[ei].getId();
+if (!seenIdsCV[evIdCV]) { seenIdsCV[evIdCV] = true; events.push(ces[ei]); }
+}
 }
 events.sort(function(a, b) { return a.getStartTime() - b.getStartTime(); });
 if (input.find_free) { return findFreeDays(start, end, events, label); }
@@ -886,11 +890,13 @@ var start = input.date ? new Date(input.date + 'T00:00:00+09:00') : getJSTDate(0
 var days = input.range_days || 14;
 var end = new Date(start.getTime() + days * 86400000);
 var matched = [];
+var seenIdsDel = {};
 var calendars = CalendarApp.getAllCalendars();
 for (var ci = 0; ci < calendars.length; ci++) {
 var events = calendars[ci].getEvents(start, end);
 for (var ei = 0; ei < events.length; ei++) {
-if (events[ei].getTitle().indexOf(input.keyword) !== -1) { matched.push(events[ei]); }
+var evIdDel = events[ei].getId();
+if (!seenIdsDel[evIdDel] && events[ei].getTitle().indexOf(input.keyword) !== -1) { seenIdsDel[evIdDel] = true; matched.push(events[ei]); }
 }
 }
 if (matched.length === 0) {
@@ -923,11 +929,13 @@ function toolCalEdit(input) {
 var start = input.search_date ? new Date(input.search_date + 'T00:00:00+09:00') : getJSTDate(0);
 var end = new Date(start.getTime() + 14 * 86400000);
 var matched = [];
+var seenIdsEdit = {};
 var cals = CalendarApp.getAllCalendars();
 for (var ci = 0; ci < cals.length; ci++) {
 var evs = cals[ci].getEvents(start, end);
 for (var ei = 0; ei < evs.length; ei++) {
-if (evs[ei].getTitle().indexOf(input.keyword) !== -1) { matched.push(evs[ei]); }
+var evIdEdit = evs[ei].getId();
+if (!seenIdsEdit[evIdEdit] && evs[ei].getTitle().indexOf(input.keyword) !== -1) { seenIdsEdit[evIdEdit] = true; matched.push(evs[ei]); }
 }
 }
 if (matched.length === 0) { return '「' + input.keyword + '」に該当する予定が見つかりませんでした'; }
@@ -1214,7 +1222,22 @@ if (!stillExists) {
 continue;
 }
 var remindTimeStr = Utilities.formatDate(remindAt, 'Asia/Tokyo', 'M月d日(E) HH:mm');
-pushToLine(config.USER_ID, '⏰ リマインダー\n' + remindTimeStr + '\n\n' + data[i][3]);
+var remMsg = '⏰ リマインダー\n' + remindTimeStr + '\n\n' + data[i][3];
+try {
+var remTone = getTone(config.USER_ID);
+if (remTone && remTone !== '丁寧' && remTone !== '1' && config.ANTHROPIC_KEY) {
+var remToneRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+method: 'post', contentType: 'application/json',
+headers: { 'x-api-key': config.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200,
+messages: [{ role: 'user', content: '以下のリマインダー通知を「' + remTone + '」の口調に変換。情報はそのまま、口調だけ変えて。\n\n' + remMsg }] }),
+muteHttpExceptions: true
+});
+var remToneR = JSON.parse(remToneRes.getContentText());
+if (remToneR.content && remToneR.content[0]) { remMsg = remToneR.content[0].text; }
+}
+} catch(e) {}
+pushToLine(config.USER_ID, remMsg);
 var repeat = data[i][5] || 'none';
 if (repeat === 'none') {
 sheet.getRange(i+1, 5).setValue('TRUE');
@@ -2050,10 +2073,14 @@ var dateStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
 var start = new Date(dateStr + 'T00:00:00+09:00');
 var end = new Date(dateStr + 'T23:59:59+09:00');
 var events = [];
+var seenIds = {};
 var allCals2 = CalendarApp.getAllCalendars();
 for (var ci2 = 0; ci2 < allCals2.length; ci2++) {
 var allEvs = allCals2[ci2].getEvents(start, end);
-for (var ei = 0; ei < allEvs.length; ei++) { events.push(allEvs[ei]); }
+for (var ei = 0; ei < allEvs.length; ei++) {
+var evId = allEvs[ei].getId();
+if (!seenIds[evId]) { seenIds[evId] = true; events.push(allEvs[ei]); }
+}
 }
 events.sort(function(a, b) { return a.getStartTime() - b.getStartTime(); });
 if (events.length === 0) {
@@ -2174,9 +2201,22 @@ lines.push('');
 }
 } catch(e) {}
 lines.push('今日も頑張りましょう💪');
-pushToLine(config.USER_ID, lines.join('\n'));
-
-
+var briefingText = lines.join('\n');
+try {
+var tone = getTone(config.USER_ID);
+if (tone && tone !== '丁寧' && tone !== '1' && config.ANTHROPIC_KEY) {
+var toneRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+method: 'post', contentType: 'application/json',
+headers: { 'x-api-key': config.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600,
+messages: [{ role: 'user', content: '以下のブリーフィングを「' + tone + '」の口調に変換してください。情報は一切変更せず、口調だけ変えてください。日時・件数・タイトル等はそのまま。\n\n' + briefingText }] }),
+muteHttpExceptions: true
+});
+var toneR = JSON.parse(toneRes.getContentText());
+if (toneR.content && toneR.content[0]) { briefingText = toneR.content[0].text; }
+}
+} catch(e) {}
+pushToLine(config.USER_ID, briefingText);
 }
 function setupBriefingTrigger() {
 var props = PropertiesService.getScriptProperties();
