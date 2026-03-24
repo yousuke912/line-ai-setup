@@ -394,6 +394,36 @@ finalReply = 'すみません、処理できませんでした。もう一度お
 break;
 }
 if (!finalReply) { finalReply = 'エラーが発生しました。\n繰り返しエラーが出る場合はAPIクレジットの残高をご確認ください:\nhttps://console.anthropic.com → Billing'; }
+// === 3段階ハルシネーション検証 ===
+try {
+var _vReply = finalReply;
+var _vTools = _usedTools.join(',');
+// 第1段階: ユーザーの入力がツール操作を要求しているか検知
+var _vMsg = message.toLowerCase();
+var _vNeedsMemo = /^メモ[\s\n]/.test(message) || /メモ[にをへ]?(追加|保存|記録|して|しといて)/.test(message);
+var _vNeedsTask = /タスク[にをへ]?(追加|登録|して|入れて)/.test(message) || /^タスク[\s\n]/.test(message);
+var _vNeedsDel = /削除|消して|消す|消去|取り消/.test(message);
+var _vNeedsDone = /完了[にを]?[しす]/.test(message) || /終わった|できた|やった/.test(message);
+var _vNeedsCal = /カレンダー[にをへ]?(追加|登録|入れて)/.test(message) || /予定[をにへ]?(追加|登録|入れて)/.test(message);
+var _vNeedsRem = /リマインダー[にをへ]?(追加|設定|登録|して)/.test(message) || /リマインド[をにへ]?(追加|設定|して)/.test(message);
+// 第2段階: AIの回答が操作完了を主張しているか検知
+var _vClaimsSave = /保存した|メモした|記録した|追加した|登録した|入れた|しといた|完了.*[!！✨]/.test(_vReply);
+var _vClaimsDel = /削除した|消した|取り消した|除した/.test(_vReply);
+var _vClaimsDone = /完了にした|完了した(?!.*タスク)/.test(_vReply);
+// 第3段階: 整合性チェック（主張 vs 実行ログ）
+var _vFailed = false;
+if (_vNeedsMemo && _vClaimsSave && _vTools.indexOf('memo_add') === -1) { _vFailed = true; }
+if (_vNeedsTask && _vClaimsSave && _vTools.indexOf('task_add') === -1) { _vFailed = true; }
+if (_vNeedsDel && _vClaimsDel && _vTools.indexOf('delete') === -1 && _vTools.indexOf('memo_delete') === -1 && _vTools.indexOf('task_delete') === -1 && _vTools.indexOf('reminder_delete') === -1) { _vFailed = true; }
+if (_vNeedsDone && _vClaimsDone && _vTools.indexOf('task_done') === -1) { _vFailed = true; }
+if (_vNeedsCal && _vClaimsSave && _vTools.indexOf('calendar_add') === -1) { _vFailed = true; }
+if (_vNeedsRem && _vClaimsSave && _vTools.indexOf('reminder_add') === -1) { _vFailed = true; }
+if (_vFailed) {
+finalReply = '⚠️ 処理がうまくいかなかったかもしれません。もう一度お試しください🙏';
+try { var _kCfg = getConfig(); if (_kCfg.USER_ID === 'U029395d561dbfe988aceae03cbf6affc') { pushToLine(_kCfg.USER_ID, '⚠️ ハルシネーション検知\nメッセージ: ' + message.substring(0,100) + '\nAI回答: ' + _vReply.substring(0,100) + '\n実行ツール: ' + (_vTools || 'なし')); } } catch(e2) {}
+}
+} catch(_vErr) {}
+// === 検証ここまで ===
 var cleanHistory = [];
 for (var hi = 0; hi < history.length; hi++) {
 var h = history[hi];
