@@ -2424,8 +2424,40 @@ ScriptApp.newTrigger('sendDemoEmails').timeBased().atHour(8).everyDays(1).create
 }
 function dailyClearCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
-
-
+try { dailyBackup(); } catch(e) {}
+}
+function dailyBackup() {
+var props = PropertiesService.getScriptProperties();
+var ssId = props.getProperty('DATA_SS_ID');
+if (!ssId) return;
+var ss;
+try { ss = SpreadsheetApp.openById(ssId); } catch(e) { return; }
+var sheets = ['タスク', 'メモ', 'リマインダー'];
+var backupData = {};
+for (var i = 0; i < sheets.length; i++) {
+var sheet = ss.getSheetByName(sheets[i]);
+if (sheet && sheet.getLastRow() > 0) {
+backupData[sheets[i]] = sheet.getDataRange().getValues();
+}
+}
+if (Object.keys(backupData).length === 0) return;
+var folderId = props.getProperty('BACKUP_FOLDER_ID');
+var folder;
+if (folderId) { try { folder = DriveApp.getFolderById(folderId); } catch(e) { folder = null; } }
+if (!folder) {
+folder = DriveApp.createFolder('LINE秘書バックアップ');
+props.setProperty('BACKUP_FOLDER_ID', folder.getId());
+}
+var dateStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+var fileName = 'backup_' + dateStr + '.json';
+var existing = folder.getFilesByName(fileName);
+if (existing.hasNext()) return;
+folder.createFile(fileName, JSON.stringify(backupData, null, 2), 'application/json');
+var files = folder.getFiles();
+var allFiles = [];
+while (files.hasNext()) { allFiles.push(files.next()); }
+allFiles.sort(function(a, b) { return a.getDateCreated() - b.getDateCreated(); });
+while (allFiles.length > 7) { allFiles.shift().setTrashed(true); }
 }
 function setupDailyCacheClearTrigger() {
 var triggers = ScriptApp.getProjectTriggers();
