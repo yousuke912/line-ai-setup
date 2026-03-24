@@ -149,6 +149,8 @@ if (isMentioned && senderUid !== ownerUid) {
 processGroupMention(ev);
 } else if (senderUid === ownerUid) {
 processGroupMessage(senderUid, msgText, grpProps);
+} else if (senderUid !== ownerUid && grpProps.getProperty('GROUP_WATCH') === 'TRUE') {
+processGroupWatch(ev, ownerUid, grpProps);
 }
 continue;
 }
@@ -2352,6 +2354,57 @@ props.setProperty(k, message);
 pushToLine(config.USER_ID, '❓ タスクにしますか？\n\n「' + message + '」\n\n「タスク:'+k.slice(-6)+'」→登録\n「スキップ:'+k.slice(-6)+'」→スルー');
 }
 } catch(e) {  }
+}
+function processGroupWatch(ev, ownerUid, props) {
+var config = getConfig();
+if (!config.ANTHROPIC_KEY || !ownerUid) return;
+var msg = (ev.message.text || '').trim();
+if (!msg || msg.length < 5) return;
+var senderName = '';
+try {
+var groupId = ev.source.groupId || ev.source.roomId;
+var profRes = UrlFetchApp.fetch('https://api.line.me/v2/bot/group/' + groupId + '/member/' + ev.source.userId + '/profile', {
+headers: { Authorization: 'Bearer ' + config.LINE_TOKEN }, muteHttpExceptions: true
+});
+if (profRes.getResponseCode() === 200) {
+senderName = JSON.parse(profRes.getContentText()).displayName || '';
+}
+} catch(e) { senderName = '誰か'; }
+try {
+var ownerName = props.getProperty('OWNER_NAME') || '';
+var nicknames = props.getProperty('OWNER_NICKNAMES') || '';
+var prompt = '以下はグループLINEでの発言です。オーナー（' + (ownerName || 'この秘書の持ち主') + '）にとって、タスク・予定・重要な依頼が含まれていますか？\n' +
+'オーナーの名前/あだ名: ' + ownerName + (nicknames ? ',' + nicknames : '') + '\n' +
+'発言者: ' + senderName + '\n' +
+'発言: ' + msg + '\n\n' +
+'判定基準:\n' +
+'- オーナー宛の依頼・お願い → YES\n' +
+'- 日時を含む予定・会議の連絡 → YES\n' +
+'- 締切・期限のある話 → YES\n' +
+'- 雑談・挨拶・相槌・他の人宛 → NO\n' +
+'- 迷ったら必ずNO（通知しすぎない）\n\n' +
+'JSONのみ返せ: {"judge":"YES","type":"task/calendar/info","summary":"1行要約"} or {"judge":"NO"}';
+var res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+method: 'post', contentType: 'application/json',
+headers: { 'x-api-key': config.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 80,
+messages: [{ role: 'user', content: prompt }] }),
+muteHttpExceptions: true
+});
+var r = JSON.parse(res.getContentText());
+if (r.error || !r.content) return;
+var m = r.content[0].text.match(/\{[\s\S]*?\}/);
+if (!m) return;
+var d = JSON.parse(m[0]);
+if (d.judge !== 'YES') return;
+var typeEmoji = d.type === 'task' ? '✅' : d.type === 'calendar' ? '📅' : '💡';
+var notifyMsg = '📢 グループLINEより\n' +
+senderName + 'さんの発言:\n' +
+'「' + (msg.length > 100 ? msg.slice(0, 100) + '…' : msg) + '」\n\n' +
+typeEmoji + ' ' + (d.summary || msg) + '\n\n' +
+(d.type === 'task' ? '→「タスクにする」で登録' : d.type === 'calendar' ? '→「予定にする」で登録' : '→「メモする」で記録');
+pushToLine(ownerUid, notifyMsg);
+} catch(e) { }
 }
 function pushToLine(userId, text) {
 var config = getConfig();
