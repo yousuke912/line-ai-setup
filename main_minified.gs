@@ -105,10 +105,16 @@ function getDataSheet(sheetName) {
 var props = PropertiesService.getScriptProperties();
 var ssId = props.getProperty('DATA_SS_ID');
 var ss;
-if (ssId) { try { ss = SpreadsheetApp.openById(ssId); } catch(e) { ss = null; } }
+if (ssId) {
+try { ss = SpreadsheetApp.openById(ssId); } catch(e) {
+try { Utilities.sleep(2000); ss = SpreadsheetApp.openById(ssId); } catch(e2) { ss = null; }
+}
+}
 if (!ss) {
+if (ssId) { props.setProperty('DATA_SS_ID_BACKUP', ssId); }
 ss = SpreadsheetApp.create('LINE AI秘書 データ管理');
 props.setProperty('DATA_SS_ID', ss.getId());
+try { var config = getConfig(); if (config.LINE_TOKEN && config.USER_ID) { pushToLine(config.USER_ID, '⚠️ データシートの接続が切れたため新規作成しました。旧ID: ' + (ssId || 'なし') + '\n管理者にお問い合わせください。'); } } catch(e) {}
 }
 var sheet = ss.getSheetByName(sheetName);
 if (!sheet) { sheet = ss.insertSheet(sheetName); }
@@ -1688,7 +1694,10 @@ var results = DriveApp.searchFiles(
 'title contains "' + input.keyword + '" and mimeType = "application/vnd.google-apps.spreadsheet" and trashed = false'
 );
 if (!results.hasNext()) { return '「' + input.keyword + '」というスプレッドシートが見つかりませんでした'; }
-var ss = SpreadsheetApp.openById(results.next().getId());
+var targetFile = results.next();
+var dataSsId = PropertiesService.getScriptProperties().getProperty('DATA_SS_ID');
+if (dataSsId && targetFile.getId() === dataSsId) { return '⚠️ データ管理シートは直接編集できません'; }
+var ss = SpreadsheetApp.openById(targetFile.getId());
 var sheet = input.sheet_name ? ss.getSheetByName(input.sheet_name) : ss.getActiveSheet();
 if (!sheet) { return 'シート「' + input.sheet_name + '」が見つかりませんでした'; }
 var mode = input.mode || 'append';
@@ -1723,6 +1732,8 @@ var results = DriveApp.searchFiles('title = "' + input.keyword + '" and mimeType
 if (!results.hasNext()) { return '「' + input.keyword + '」というスプレッドシートが見つかりませんでした'; }
 var file = results.next();
 var name = file.getName();
+var dataSsId2 = PropertiesService.getScriptProperties().getProperty('DATA_SS_ID');
+if (dataSsId2 && file.getId() === dataSsId2) { return '⚠️ データ管理シートは削除できません'; }
 if (!input.confirm) { return '⚠️ スプレッドシート「' + name + '」が見つかりました。削除してよいかユーザーに確認してください。確認後にconfirm=trueで再度呼んでください。'; }
 file.setTrashed(true);
 return '🗑 スプレッドシートをゴミ箱に移動しました: ' + name;
