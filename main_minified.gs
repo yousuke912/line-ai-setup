@@ -594,7 +594,7 @@ _T('gmail_check','未読メール確認',{count:n('件数(デフォルト5)')}),
 _T('gmail_send','メール送信',{to_email:s('宛先メール'),to_name:s('宛先名'),subject:s('件名'),body:s('本文')},['subject','body']),
 _T('calendar_view','予定確認',{range:s('today/tomorrow/week'),date_from:s('開始日date'),date_to:s('終了日date'),find_free:b('trueで空き時間')},['range']),
 _T('calendar_add','予定追加。recurrenceで繰り返し指定可(daily/weekly/monthly/weekdays)',{title:s('タイトル'),start:s('開始日時datetime'),end:s('終了日時datetime'),location:s('場所'),description:s('詳細'),all_day:b('終日true'),recurrence:s('繰り返し:daily/weekly/monthly/weekdays/none')},['title','start']),
-_T('calendar_delete','予定削除',{keyword:s('予定キーワード'),date:s('日付date'),range_days:n('検索範囲'),time_hint:s('時刻ヒント')},['keyword']),
+_T('calendar_delete','予定削除。複数該当時はindex(番号)で指定',{keyword:s('予定キーワード'),date:s('日付date'),range_days:n('検索範囲'),time_hint:s('時刻ヒント'),index:n('番号指定(1始まり)')},['keyword']),
 _T('calendar_edit','予定変更',{keyword:s('予定キーワード'),search_date:s('検索日date'),new_title:s('新タイトル'),new_start:s('新開始datetime'),new_end:s('新終了datetime'),new_location:s('新場所')},['keyword']),
 _T('sheets_create','スプシ作成',{title:s('タイトル'),headers:{type:'array',items:{type:'string'},description:'列名配列'}},['title','headers']),
 _T('docs_create','ドキュメント作成',{title:s('タイトル'),content:s('初期内容')},['title']),
@@ -899,11 +899,14 @@ var hour = parseInt(input.time_hint, 10);
 var filtered = matched.filter(function(ev) { return parseInt(Utilities.formatDate(ev.getStartTime(), 'Asia/Tokyo', 'H'), 10) === hour; });
 if (filtered.length > 0) { matched = filtered; }
 }
+if (input.index && input.index >= 1 && input.index <= matched.length) {
+matched = [matched[input.index - 1]];
+}
 if (matched.length > 1) {
 var list = matched.map(function(ev, i) {
 return (i+1) + '. ' + fmtDate(ev.getStartTime(), 'M/d(E) HH:mm') + ' ' + ev.getTitle();
 }).join('\n');
-return '複数見つかりました。どれを削除しますか？\n' + list + '\n\n番号か時刻で指定してください。例:「2番目を削除」「18時のMTGを削除」';
+return '複数見つかりました。どれを削除しますか？\n' + list + '\n\n番号で指定してください。';
 }
 var title = matched[0].getTitle();
 var dt = fmtDate(matched[0].getStartTime(), 'M月d日(E) HH:mm');
@@ -926,11 +929,14 @@ if (evs[ei].getTitle().indexOf(input.keyword) !== -1) { matched.push(evs[ei]); }
 }
 }
 if (matched.length === 0) { return '「' + input.keyword + '」に該当する予定が見つかりませんでした'; }
+if (input.index && input.index >= 1 && input.index <= matched.length) {
+matched = [matched[input.index - 1]];
+}
 if (matched.length > 1) {
 var list = matched.map(function(ev, i) {
 return (i+1) + '. ' + fmtDate(ev.getStartTime(), 'M/d(E) HH:mm') + ' ' + ev.getTitle();
 }).join('\n');
-return '複数見つかりました。どれを変更しますか？\n' + list;
+return '複数見つかりました。どれを変更しますか？番号で指定してください。\n' + list;
 }
 var ev = matched[0];
 var origStart = ev.getStartTime();
