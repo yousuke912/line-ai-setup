@@ -635,7 +635,7 @@ break;
 }
 }
 }
-var ALWAYS_INCLUDE = {calendar_view:1,calendar_add:1,task_add:1,task_view:1,task_done:1,memo_add:1,memo_view:1,reminder_add:1,reminder_view:1,briefing_setting:1,smart_search:1};
+var ALWAYS_INCLUDE = {calendar_view:1,calendar_add:1,calendar_delete:1,calendar_edit:1,task_add:1,task_view:1,task_done:1,task_undone:1,task_delete:1,task_restore:1,memo_add:1,memo_view:1,memo_delete:1,reminder_add:1,reminder_view:1,reminder_delete:1,briefing_setting:1,smart_search:1};
 for(var ai in ALWAYS_INCLUDE){needed[ai]=true;}
 var matched = Object.keys(needed);
 if (matched.length > 0) {
