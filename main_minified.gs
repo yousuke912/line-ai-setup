@@ -1021,7 +1021,8 @@ if (!items.length) { return 'メモはまだありません'; }
 var lines = ['メモ一覧 ' + items.length + '件:'];
 var start = Math.max(0, items.length - limit);
 for (var j = start; j < items.length; j++) {
-lines.push(items[j].idx + '. ' + items[j].content + (items[j].tag ? ' [' + items[j].tag + ']' : '') + ' (' + items[j].date + ')');
+var dispNum = j + 1;
+lines.push(dispNum + '. ' + items[j].content + (items[j].tag ? ' [' + items[j].tag + ']' : '') + ' (' + items[j].date + ')');
 }
 return lines.join('\n');
 }
@@ -1029,16 +1030,27 @@ function toolMemoDelete(input) {
 var sheet = getDataSheet('メモ');
 if (sheet.getLastRow() <= 1) { return '削除するメモがありません'; }
 var data = sheet.getDataRange().getValues();
+var activeItems = [];
+for (var mi = 1; mi < data.length; mi++) {
+if (data[mi][2] !== 'DELETED') { activeItems.push({row:mi, content:data[mi][3]}); }
+}
 var kws = String(input.keyword).split(/[,、，\s]+/);
 var deleted = [];
 for (var k = 0; k < kws.length; k++) {
 var kw = kws[k].trim(); if (!kw) continue;
-for (var i = data.length - 1; i >= 1; i--) {
-if (data[i][2] === 'DELETED') continue;
-if (data[i][3].indexOf(kw) !== -1 || String(i) === kw) {
-sheet.getRange(i + 1, 3).setValue('DELETED');
-deleted.push(data[i][3]);
-data[i][2] = 'DELETED';
+var kwNum = parseInt(kw);
+if (!isNaN(kwNum) && kwNum >= 1 && kwNum <= activeItems.length) {
+var target = activeItems[kwNum - 1];
+sheet.getRange(target.row + 1, 3).setValue('DELETED');
+deleted.push(target.content);
+activeItems.splice(kwNum - 1, 1);
+continue;
+}
+for (var i = activeItems.length - 1; i >= 0; i--) {
+if (activeItems[i].content.indexOf(kw) !== -1) {
+sheet.getRange(activeItems[i].row + 1, 3).setValue('DELETED');
+deleted.push(activeItems[i].content);
+activeItems.splice(i, 1);
 break;
 }
 }
