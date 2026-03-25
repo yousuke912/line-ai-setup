@@ -1,3 +1,9 @@
+function _safeJson(text) {
+if (!text) return null;
+var t = text.trim();
+if (t.charAt(0) === '<') return null;
+try { return JSON.parse(t); } catch(e) { return null; }
+}
 function getConfig() {
 var props = PropertiesService.getScriptProperties();
 return {
@@ -1233,8 +1239,8 @@ payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200,
 messages: [{ role: 'user', content: '以下のリマインダー通知を「' + remTone + '」の口調に変換。情報はそのまま、口調だけ変えて。\n\n' + remMsg }] }),
 muteHttpExceptions: true
 });
-var remToneR = JSON.parse(remToneRes.getContentText());
-if (remToneR.content && remToneR.content[0]) { remMsg = remToneR.content[0].text; }
+var remToneR = _safeJson(remToneRes.getContentText());
+if (remToneR && remToneR.content && remToneR.content[0]) { remMsg = remToneR.content[0].text; }
 }
 } catch(e) {}
 pushToLine(config.USER_ID, remMsg);
@@ -1464,8 +1470,8 @@ var sampleLogs = logs.slice(0, 50).map(function(l) { return 'Q:' + (l.user_messa
 var analysisPrompt = '以下はLINE AI秘書の1週間分のやりとりログ（最大50件）です。分析してJSON形式で回答してください。\n\n' +
 '{"top_questions":["よく聞かれる質問TOP5"],"failed_patterns":["AIがうまく答えられなかったパターン"],"keyword_suggestions":["selectToolsに追加すべきキーワード（ツール名:キーワード形式）"],"prompt_suggestions":["system_promptに追加すべき指示"]}\n\nログ:\n' + sampleLogs;
 var aiRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', { method: 'post', contentType: 'application/json', headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }, payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: analysisPrompt }] }), muteHttpExceptions: true });
-var aiData = JSON.parse(aiRes.getContentText());
-var analysisText = aiData.content && aiData.content[0] ? aiData.content[0].text : '{}';
+var aiData = _safeJson(aiRes.getContentText());
+var analysisText = aiData && aiData.content && aiData.content[0] ? aiData.content[0].text : '{}';
 var jsonMatch = analysisText.match(/\{[\s\S]*\}/);
 var analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
 var hourDist = {};
@@ -2212,8 +2218,8 @@ payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600,
 messages: [{ role: 'user', content: '以下のブリーフィングを「' + tone + '」の口調に変換してください。情報は一切変更せず、口調だけ変えてください。日時・件数・タイトル等はそのまま。\n\n' + briefingText }] }),
 muteHttpExceptions: true
 });
-var toneR = JSON.parse(toneRes.getContentText());
-if (toneR.content && toneR.content[0]) { briefingText = toneR.content[0].text; }
+var toneR = _safeJson(toneRes.getContentText());
+if (toneR && toneR.content && toneR.content[0]) { briefingText = toneR.content[0].text; }
 }
 } catch(e) {}
 pushToLine(config.USER_ID, briefingText);
@@ -2359,10 +2365,10 @@ if(sb.hasNext()){var fs=sb.next().getFiles();while(fs.hasNext()&&items.length<10
 var sm=_ssMemos(dept);for(var j=0;j<sm.length&&items.length<15;j++){items.push('📝 '+sm[j].content+' ('+sm[j].date+')');}
 if(!items.length)return dept+'にメモはまだありません';
 return'📁 '+dept+' ('+items.length+'件)\n\n'+items.join('\n---\n');}
-function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY||!c.USER_ID)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var senderName='';try{var gid=ev.source.groupId||ev.source.roomId;var pRes=UrlFetchApp.fetch('https://api.line.me/v2/bot/group/'+gid+'/member/'+ev.source.userId+'/profile',{headers:{Authorization:'Bearer '+c.LINE_TOKEN},muteHttpExceptions:true});if(pRes.getResponseCode()===200)senderName=JSON.parse(pRes.getContentText()).displayName||'';}catch(e){senderName='メンバー';}try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var r=JSON.parse(res.getContentText());if(r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n✅ タスク登録: '+(d.v||msg));}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n⏰ リマインダー登録: '+(d.v||msg));}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n📝 メモ登録: '+(d.v||msg));}}catch(e){}}
+function processGroupMention(ev){var c=getConfig();if(!c.ANTHROPIC_KEY||!c.USER_ID)return;var msg=ev.message.text.trim().replace(/@[^\s\u3000]+/g,'').trim();if(!msg)return;var senderName='';try{var gid=ev.source.groupId||ev.source.roomId;var pRes=UrlFetchApp.fetch('https://api.line.me/v2/bot/group/'+gid+'/member/'+ev.source.userId+'/profile',{headers:{Authorization:'Bearer '+c.LINE_TOKEN},muteHttpExceptions:true});if(pRes.getResponseCode()===200)senderName=JSON.parse(pRes.getContentText()).displayName||'';}catch(e){senderName='メンバー';}try{var res=UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:{'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'},payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,messages:[{role:'user',content:'「'+msg+'」をtask/reminder/memo/skipで分類。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"reminder","v":"内容","dt":"日時"} or {"t":"memo","v":"内容"} or {"t":"skip"}のみ返せ'}]}),muteHttpExceptions:true});var r=_safeJson(res.getContentText());if(!r||r.error||!r.content)return;var m=r.content[0].text.match(/\{[\s\S]*?\}/);if(!m)return;var d=JSON.parse(m[0]);if(d.t==='task'){var ts=getDataSheet('タスク');if(ts.getLastRow()===0)ts.appendRow(['ID','追加日時','期限','優先度','タスク','状態']);ts.appendRow([Date.now()+'',getJSTNow(),'','中',d.v||msg,'未完了']);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n✅ タスク登録: '+(d.v||msg));}else if(d.t==='reminder'){var dt=d.dt?new Date(d.dt.includes('+')?d.dt:d.dt+'+09:00'):new Date(Date.now()+3600000);if(isNaN(dt.getTime()))dt=new Date(Date.now()+3600000);var rs=getDataSheet('リマインダー');if(rs.getLastRow()===0)rs.appendRow(['ID','設定日時','リマインド日時','内容','送信済み','繰り返し']);rs.appendRow([Date.now()+'',getJSTNow(),dt.getTime(),d.v||msg,'FALSE','none']);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n⏰ リマインダー登録: '+(d.v||msg));}else if(d.t==='memo'){var ms=getDataSheet('メモ');if(ms.getLastRow()===0)ms.appendRow(['ID','日時','タグ','内容']);ms.appendRow([Date.now()+'',getJSTNow(),'グループ',d.v||msg]);pushToLine(c.USER_ID,'📢 グループで'+senderName+'さんからメンション\n📝 メモ登録: '+(d.v||msg));}}catch(e){}}
 
 
-function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){return JSON.parse(UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText()).content[0].text.trim();}var depts2=['秘書室','LINE事業','Instagram','note','介護ブログ','コミュニティ','学校コンサル','HP運用'];try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:秘書室,LINE事業,Instagram,note,介護ブログ,コミュニティ,学校コンサル,HP運用\nメモ:'+t+'\nカテゴリ名のみ',15);if(depts2.indexOf(cat)===-1)cat='秘書室';var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');var subs=root.getFoldersByName(cat);var folder=subs.hasNext()?subs.next():root.createFolder(cat);folder.createFile(Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
+function saveToMyCompanyAuto(t){var c=getConfig();if(!c.ANTHROPIC_KEY)return;var h={'x-api-key':c.ANTHROPIC_KEY,'anthropic-version':'2023-06-01'};function q(p,m){var _r=_safeJson(UrlFetchApp.fetch('https://api.anthropic.com/v1/messages',{method:'post',contentType:'application/json',headers:h,payload:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:m,messages:[{role:'user',content:p}]}),muteHttpExceptions:true}).getContentText());return _r&&_r.content&&_r.content[0]?_r.content[0].text.trim():'';}var depts2=['秘書室','LINE事業','Instagram','note','介護ブログ','コミュニティ','学校コンサル','HP運用'];try{if(q('アイデア/思考/気づき系?\nメッセージ:'+t+'\n「はい」か「いいえ」のみ',5)!=='はい')return;var cat=q('分類:秘書室,LINE事業,Instagram,note,介護ブログ,コミュニティ,学校コンサル,HP運用\nメモ:'+t+'\nカテゴリ名のみ',15);if(depts2.indexOf(cat)===-1)cat='秘書室';var root=DriveApp.getFolderById('1RLc-33sobz9UJ-fbcF7pluA6tAez1K3j');var subs=root.getFoldersByName(cat);var folder=subs.hasNext()?subs.next():root.createFolder(cat);folder.createFile(Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.txt','【'+cat+'】\n'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd HH:mm')+'\n\n'+t,MimeType.PLAIN_TEXT);}catch(e){}}
 
 
 
@@ -2378,8 +2384,8 @@ payload:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:80,
 messages:[{role:'user',content:'「'+message+'」をtask/skip/askで分類。task=自分がやる明確な作業のみ。迷ったらskip。JSON:{"t":"task","v":"内容"} or {"t":"skip"} or {"t":"ask"} のみ返せ'}]}),
 muteHttpExceptions:true
 });
-var r = JSON.parse(res.getContentText());
-if (r.error || !r.content) { return; }
+var r = _safeJson(res.getContentText());
+if (!r || r.error || !r.content) { return; }
 var m = r.content[0].text.match(/\{[\s\S]*?\}/);
 if (!m) { return; }
 var d = JSON.parse(m[0]);
@@ -2431,7 +2437,7 @@ payload: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 80,
 messages: [{ role: 'user', content: prompt }] }),
 muteHttpExceptions: true
 });
-var r = JSON.parse(res.getContentText());
+var r = _safeJson(res.getContentText());
 if (r.error || !r.content) return;
 var m = r.content[0].text.match(/\{[\s\S]*?\}/);
 if (!m) return;
@@ -2803,7 +2809,7 @@ try {
 var url = props.getProperty('CMS_SUPABASE_URL') + '/rest/v1/accounts?id=eq.' + clientId + '&select=status';
 var res = UrlFetchApp.fetch(url, { headers: { 'apikey': props.getProperty('CMS_SUPABASE_KEY'), 'Authorization': 'Bearer ' + props.getProperty('CMS_SUPABASE_KEY') }, muteHttpExceptions: true });
 if (res.getResponseCode() !== 200) { return 'active'; }
-var data = JSON.parse(res.getContentText());
+var data = _safeJson(res.getContentText());
 var st = (data && data[0]) ? data[0].status : 'active';
 try { cache.put('cms_status_' + clientId, st, 60); } catch(e) {}
 return st;
@@ -2820,7 +2826,7 @@ try {
 var url = props.getProperty('CMS_SUPABASE_URL') + '/rest/v1/account_settings?account_id=eq.' + clientId + '&select=*';
 var res = UrlFetchApp.fetch(url, { headers: { 'apikey': props.getProperty('CMS_SUPABASE_KEY'), 'Authorization': 'Bearer ' + props.getProperty('CMS_SUPABASE_KEY') }, muteHttpExceptions: true });
 if (res.getResponseCode() !== 200) { return null; }
-var data = JSON.parse(res.getContentText());
+var data = _safeJson(res.getContentText());
 if (!data || data.length === 0) { return null; }
 var settings = data[0];
 try { cache.put('cms_settings_' + clientId, JSON.stringify(settings), 60); } catch(e) {}
