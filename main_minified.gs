@@ -2210,6 +2210,10 @@ lines.push('今日も頑張りましょう💪');
 var briefingText = lines.join('\n');
 try {
 var tone = getTone(config.USER_ID);
+var allUids = PropertiesService.getScriptProperties().getKeys().filter(function(k){return k.indexOf('tone_')===0;});
+if (config.USER_ID === 'U029395d561dbfe988aceae03cbf6affc') {
+pushToLine(config.USER_ID, '🔍デバッグ: USER_ID=' + config.USER_ID + ' tone=' + (tone||'(空)') + ' tone_keys=' + allUids.join(','));
+}
 if (tone && tone !== '丁寧' && tone !== '1' && config.ANTHROPIC_KEY) {
 var toneRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
 method: 'post', contentType: 'application/json',
