@@ -353,7 +353,12 @@ var finalReply = '';
 var _usedTools = [];
 for (var loop = 0; loop < maxLoops; loop++) {
 var response = callClaudeWithTools(config.ANTHROPIC_KEY, history, isReplyMode, remoteConfig);
-if (!response) { finalReply = 'エラーが発生しました。もう一度お試しください。'; break; }
+if (!response) { finalReply = '申し訳ありません、一時的にうまく処理できませんでした🙏\nもう一度お試しください。'; break; }
+if (response._api_error) {
+try { pushToLine('U029395d561dbfe988aceae03cbf6affc', '⚠️ APIエラー\nUID: ' + uid + '\nHTTP: ' + response._http_code + '\nType: ' + response._err_type + '\nMsg: ' + (response._err_msg || '').substring(0, 200) + '\nInput: ' + message.substring(0, 100)); } catch(e) {}
+finalReply = '申し訳ありません、うまく処理できませんでした🙏\nしばらくしてからもう一度お試しください。';
+break;
+}
 var stopReason = response.stop_reason;
 var content = response.content;
 if (response._credit_error) {
@@ -565,6 +570,7 @@ payload: JSON.stringify(payload),
 muteHttpExceptions: true
 });
 var rawText = res.getContentText();
+var httpCode = res.getResponseCode();
 if (rawText.charAt(0) === '<') return { _credit_error: true };
 var result = JSON.parse(rawText);
 if (result.error) {
@@ -573,13 +579,11 @@ var errMsg = result.error.message || '';
 if (errType === 'billing_error' || errMsg.indexOf('credit') !== -1 || errMsg.indexOf('balance') !== -1 || result.error.type === 'insufficient_quota') {
 return { _credit_error: true };
 }
-return null;
+return { _api_error: true, _err_type: errType, _err_msg: errMsg, _http_code: httpCode };
 }
 return result;
 } catch (err) {
-
-
-return null;
+return { _api_error: true, _err_type: 'exception', _err_msg: String(err), _http_code: 0 };
 }
 }
 function _T(n,d,p,r){return{name:n,description:d,input_schema:{type:'object',properties:p||{},required:r||[]}};}
@@ -2210,10 +2214,6 @@ lines.push('今日も頑張りましょう💪');
 var briefingText = lines.join('\n');
 try {
 var tone = getTone(config.USER_ID);
-var allUids = PropertiesService.getScriptProperties().getKeys().filter(function(k){return k.indexOf('tone_')===0;});
-if (config.USER_ID === 'U029395d561dbfe988aceae03cbf6affc') {
-pushToLine(config.USER_ID, '🔍デバッグ: USER_ID=' + config.USER_ID + ' tone=' + (tone||'(空)') + ' tone_keys=' + allUids.join(','));
-}
 if (tone && tone !== '丁寧' && tone !== '1' && config.ANTHROPIC_KEY) {
 var toneRes = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
 method: 'post', contentType: 'application/json',
