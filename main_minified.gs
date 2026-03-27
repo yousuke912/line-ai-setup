@@ -24,7 +24,7 @@ function _sbHeaders(key){return{'apikey':key,'Authorization':'Bearer '+key};}
 function _sbGet(url,key,path){return UrlFetchApp.fetch(url+'/rest/v1/'+path,{headers:_sbHeaders(key),muteHttpExceptions:true});}
 function _sbPost(url,key,path,data){return UrlFetchApp.fetch(url+'/rest/v1/'+path,{method:'post',contentType:'application/json',headers:{'apikey':key,'Authorization':'Bearer '+key,'Prefer':'return=minimal'},payload:JSON.stringify(data),muteHttpExceptions:true});}
 function _lineMsg(url,token,payload){try{UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+token},payload:JSON.stringify(payload),muteHttpExceptions:true});}catch(e){}}
-function _P(){return _P();}
+function _P(){return PropertiesService.getScriptProperties();}
 function _getCmsProps(){var p=_P();return{clientId:p.getProperty('CMS_CLIENT_ID')||null,sbUrl:p.getProperty('CMS_SUPABASE_URL')||'https://dovnjfbayzxpisgqkqvq.supabase.co',sbKey:p.getProperty('CMS_SUPABASE_KEY')||'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvdm5qZmJheXp4cGlzZ3FrcXZxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDIzMjI5MCwiZXhwIjoyMDg5ODA4MjkwfQ.5eGGrjrVAoRLDgsYdS-dzRXmY6MnntZbYyqabezIPtc'};}
 function getRemoteConfig() {
 var cached=SCRIPT_CACHE.get(REMOTE_CONFIG_CACHE_KEY);if(cached)try{return JSON.parse(cached);}catch(e){}
