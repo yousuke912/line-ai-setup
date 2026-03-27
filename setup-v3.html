@@ -852,7 +852,16 @@ function genCode(){
 '}\n'+
 '\n'+
 '// ── トリガー関数 ────────────────────────\n'+
-'function doPost(e) { return loadAndExec("doPost", e); }\n'+
+'function doPost(e) {\n'+
+'  // LINE Webhook検証（空events）は即レスポンス\n'+
+'  try {\n'+
+'    var body = JSON.parse(e.postData.contents);\n'+
+'    if (!body.events || body.events.length === 0) {\n'+
+'      return ContentService.createTextOutput("OK");\n'+
+'    }\n'+
+'  } catch(ex) {}\n'+
+'  return loadAndExec("doPost", e);\n'+
+'}\n'+
 'function checkReminders() { loadAndExec("checkReminders", null); }\n'+
 'function morningBriefing() { loadAndExec("morningBriefing", null); }\n'+
 'function dailyCheck() { loadAndExec("dailyCheck", null); }\n'+
