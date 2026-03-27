@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>いつでも秘書 セットアップ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--pri:#1E4E8C;--pri-l:#e8f0fe;--acc:#06C755;--acc-l:#dcfce7;--err:#dc2626;--bg:#f5f7fa;--card:#fff;--txt:#1a1a1a;--sub:#666;--bdr:#e5e5e5;--font:'Hiragino Sans','Meiryo',sans-serif;--mono:'JetBrains Mono','SF Mono','Consolas',monospace}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);line-height:1.7;min-height:100vh}
+.hd{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.hd-logo{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.hd-logo em{color:#93c5fd;font-style:normal}
+.hd-step{font-size:13px;opacity:.85;margin-left:auto}
+main{max-width:680px;margin:0 auto;padding:20px 16px 60px}
+.screen{display:none}.screen.active{display:block}
+.wrap{display:flex;flex-direction:column;gap:20px}
+
+/* Progress bar */
+.prog-bar{background:var(--card);border-radius:12px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.prog-label{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-bottom:8px}
+.prog-label span:first-child{font-weight:700;color:var(--pri)}
+.prog-track{height:6px;background:#e5e7eb;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--pri),#3b82f6);border-radius:99px;transition:width .4s}
+.prog-steps{display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:var(--sub)}
+.prog-dot{text-align:center;flex:1}
+.prog-dot.done{color:var(--pri);font-weight:700}
+.prog-dot.cur{color:var(--acc);font-weight:700}
+
+/* Cards */
+.card{background:var(--card);border-radius:14px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-num{font-size:12px;color:var(--pri);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.card-h{font-size:18px;font-weight:800;margin-bottom:16px;line-height:1.4}
+
+/* Buttons */
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;background:var(--acc);color:#fff;font-family:var(--font)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(6,199,85,.3)}
+.btn:active{transform:translateY(0)}
+.btn-back{background:none;border:none;color:var(--sub);font-size:14px;cursor:pointer;align-self:flex-start;padding:4px 0;font-family:var(--font)}
+.btn-ghost{display:block;width:100%;padding:14px;border:1px solid var(--bdr);border-radius:12px;background:transparent;font-size:14px;color:var(--sub);cursor:pointer;font-family:var(--font)}
+
+/* Inputs */
+.inp{width:100%;padding:14px 16px;border:2px solid var(--bdr);border-radius:10px;font-size:15px;font-family:var(--mono);transition:border .2s;background:#fff}
+.inp:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(30,78,140,.1)}
+.inp.ok{border-color:var(--acc)}.inp.ng{border-color:var(--err)}
+.inp-wrap{position:relative}.inp-ico{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px}
+.inp-err{display:none;color:var(--err);font-size:13px;margin-top:6px}
+
+/* Select */
+.sel{width:100%;padding:14px 16px;border:2px solid var(--bdr);border-radius:10px;font-size:15px;font-family:var(--font);transition:border .2s;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
+.sel:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(30,78,140,.1)}
+
+/* Job type cards */
+.jt-grid{display:grid;gap:12px}
+.jt-card{border:2px solid var(--bdr);border-radius:12px;padding:16px 20px;cursor:pointer;transition:all .2s;background:var(--card)}
+.jt-card:hover{border-color:#93c5fd;background:#f8fbff}
+.jt-card.selected{border-color:var(--pri);background:var(--pri-l);box-shadow:0 0 0 3px rgba(30,78,140,.12)}
+.jt-card.disabled{opacity:.5;cursor:not-allowed}
+.jt-card.disabled:hover{border-color:var(--bdr);background:var(--card)}
+.jt-name{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.jt-badge{font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:99px;font-weight:600}
+.jt-desc{font-size:13px;color:var(--sub);line-height:1.5}
+.jt-check{display:none;color:var(--pri);font-weight:700;font-size:14px}
+.jt-card.selected .jt-check{display:inline}
+
+/* Illustration */
+.ill{background:#fafafa;border-radius:10px;padding:16px;margin-bottom:12px;text-align:center}
+.ill-cap{font-size:12px;color:var(--sub);margin-top:8px}
+
+/* Step list */
+.slist{list-style:none;display:flex;flex-direction:column;gap:12px}
+.slist-item{display:flex;gap:12px;align-items:flex-start}
+.sn{width:28px;height:28px;border-radius:50%;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:2px}
+.sb{flex:1;font-size:14px}
+.sb-note{background:#eff6ff;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;color:#1e40af}
+.sb-warn{background:#fef2f2;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;color:var(--err)}
+
+/* Boxes */
+.box{border-radius:10px;padding:14px 16px;margin-top:12px;font-size:14px}
+.box-t{font-weight:700;margin-bottom:4px}
+.box-blue{background:#eff6ff;color:#1e40af}
+.box-green{background:var(--acc-l);color:#166534}
+.box-yellow{background:#fefce8;color:#854d0e}
+
+/* Code block */
+.code-wrap{position:relative;margin-top:12px}
+.code-block{background:#1e293b;color:#e2e8f0;padding:16px;border-radius:10px;font-family:var(--mono);font-size:12px;line-height:1.6;overflow-x:auto;max-height:300px;white-space:pre;tab-size:2}
+.cp-btn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.15);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:var(--font);transition:background .2s}
+.cp-btn:hover{background:rgba(255,255,255,.25)}
+.cp-btn.done{background:var(--acc)}
+
+/* Checklist */
+.chk{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0f0}
+.chk:last-child{border-bottom:none}
+.chk-box{width:20px;height:20px;border:2px solid var(--bdr);border-radius:5px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.chk-box.checked{background:var(--acc);border-color:var(--acc);color:#fff}
+.chk-txt{font-size:14px;flex:1}
+
+/* Done screen */
+.done-wrap{text-align:center;padding:20px 0}
+.done-icon{font-size:48px;display:block;margin-bottom:12px}
+.done-title{font-size:22px;font-weight:800;margin-bottom:8px}
+.done-title em{color:var(--acc);font-style:normal}
+.done-sub{color:var(--sub);font-size:14px}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.cmd{background:#f8f9fa;border-radius:10px;padding:12px}
+.cmd-txt{font-weight:700;font-size:14px;margin-bottom:2px}
+.cmd-desc{font-size:12px;color:var(--sub)}
+
+/* Footer link */
+.ft{text-align:center;margin-top:24px;font-size:12px;color:var(--sub)}
+.ft a{color:var(--pri);text-decoration:none}
+
+@media(max-width:500px){
+  main{padding:12px 10px 40px}
+  .card{padding:18px 16px}
+  .card-h{font-size:16px}
+  .cmd-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="hd">
+  <div class="hd-logo">いつでも秘書 <em>Setup</em></div>
+  <div class="hd-step" id="hdStep">セットアップ</div>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════
+     S0: スタート
+══════════════════════════════ -->
+<div class="screen active" id="s0">
+<div class="wrap">
+  <div class="card">
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:36px;margin-bottom:8px">🤖</div>
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:4px">いつでも秘書</h1>
+      <p style="color:var(--sub);font-size:14px">LINE AI秘書 セットアップウィザード</p>
+    </div>
+    <p style="font-size:14px;margin-bottom:16px">
+      このウィザードに沿って進めるだけで、LINE AI秘書が使えるようになります。<br>
+      所要時間：<strong>約10〜15分</strong>
+    </p>
+
+    <div class="box box-blue">
+      <div class="box-t">📋 事前に準備するもの</div>
+      <div style="margin-top:8px">
+        <div class="chk" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <div class="chk-txt"><strong>LINE公式アカウント</strong>のチャネルアクセストークン</div>
+        </div>
+        <div class="chk" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <div class="chk-txt"><strong>Anthropic</strong>のAPIキー（sk-ant-で始まるもの）</div>
+        </div>
+        <div class="chk" onclick="toggleChk(this)">
+          <div class="chk-box"></div>
+          <div class="chk-txt"><strong>Googleアカウント</strong>（Gmail・カレンダーで使用中のもの）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(1)">セットアップを開始する</button>
+  <div class="ft"><a href="https://itsudemo-hisho.com" target="_blank">いつでも秘書</a> by 株式会社おもせか</div>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S1: プラン選択
+══════════════════════════════ -->
+<div class="screen" id="s1">
+<div class="wrap">
+  <button class="btn-back" onclick="go(0)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 1 / 7</span><span>利用プラン選択</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:14%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot cur">①プラン</div>
+      <div class="prog-dot">②LINE</div>
+      <div class="prog-dot">③API</div>
+      <div class="prog-dot">④コード</div>
+      <div class="prog-dot">⑤GAS</div>
+      <div class="prog-dot">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-num">STEP 1</div>
+    <h2 class="card-h">利用プランを選択してください</h2>
+    <p style="font-size:14px;color:var(--sub);margin-bottom:16px">お仕事の内容に合わせて、AIの応答やツールが最適化されます。</p>
+
+    <div class="jt-grid">
+      <div class="jt-card selected" onclick="selJob('general',this)" id="jt-general">
+        <div class="jt-name"><span class="jt-check">&#10003;</span> 汎用版（スタンダード）</div>
+        <div class="jt-desc">ビジネス全般に対応。メール・カレンダー・メモ・タスク管理・検索など21機能をフル活用できます。</div>
+      </div>
+      <div class="jt-card" onclick="selJob('care_manager',this)" id="jt-care_manager">
+        <div class="jt-name"><span class="jt-check">&#10003;</span> 居宅ケアマネ版</div>
+        <div class="jt-desc">居宅介護支援専門員向け。担当者会議の議事録作成、モニタリング管理、ケアプラン補助に最適化。日常操作は高速AIで処理します。</div>
+      </div>
+      <div class="jt-card disabled" id="jt-visiting_care">
+        <div class="jt-name">訪問介護版 <span class="jt-badge">準備中</span></div>
+        <div class="jt-desc">訪問介護事業所向けのプラン。近日リリース予定です。</div>
+      </div>
+      <div class="jt-card disabled" id="jt-visiting_nurse">
+        <div class="jt-name">訪問看護版 <span class="jt-badge">準備中</span></div>
+        <div class="jt-desc">訪問看護ステーション向けのプラン。近日リリース予定です。</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(2)">次へ進む</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S2: LINEトークン
+══════════════════════════════ -->
+<div class="screen" id="s2">
+<div class="wrap">
+  <button class="btn-back" onclick="go(1)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 2 / 7</span><span>LINEチャネルアクセストークン</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:28%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot done">①プラン</div>
+      <div class="prog-dot cur">②LINE</div>
+      <div class="prog-dot">③API</div>
+      <div class="prog-dot">④コード</div>
+      <div class="prog-dot">⑤GAS</div>
+      <div class="prog-dot">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-num">STEP 2</div>
+    <h2 class="card-h">LINEチャネルアクセストークンを入力</h2>
+
+    <div class="ill">
+      <svg width="100%" viewBox="0 0 540 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="536" height="96" rx="12" fill="white" stroke="#e5e5e5" stroke-width="1.5"/>
+        <rect x="20" y="16" width="120" height="10" rx="3" fill="#06C755"/>
+        <text x="80" y="24" text-anchor="middle" font-size="8" fill="white" font-family="sans-serif" font-weight="700">LINE Developers</text>
+        <text x="20" y="48" font-size="11" fill="#333" font-family="sans-serif" font-weight="700">Messaging API設定</text>
+        <text x="20" y="66" font-size="10" fill="#666" font-family="sans-serif">チャネルアクセストークン（長期）</text>
+        <rect x="20" y="72" width="360" height="18" rx="4" fill="#f5f5f5" stroke="#ddd"/>
+        <text x="30" y="84" font-size="9" fill="#999" font-family="monospace">xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...</text>
+        <rect x="390" y="72" width="50" height="18" rx="4" fill="#06C755"/>
+        <text x="415" y="84" text-anchor="middle" font-size="9" fill="white" font-family="sans-serif" font-weight="700">発行</text>
+      </svg>
+      <div class="ill-cap">LINE Developers → チャンネル → Messaging API設定 → チャネルアクセストークン（長期）を発行・コピー</div>
+    </div>
+
+    <div class="inp-wrap">
+      <input class="inp" id="tok" placeholder="チャネルアクセストークンを貼り付け" oninput="vTok()" autocomplete="off" spellcheck="false">
+      <span class="inp-ico" id="tokIco"></span>
+    </div>
+    <div class="inp-err" id="tokErr">チャネルアクセストークンを入力してください</div>
+
+    <div class="box box-blue" style="margin-top:16px">
+      <div class="box-t">💡 取得手順</div>
+      <a href="https://developers.line.biz/" target="_blank" style="color:#1e40af">LINE Developers</a> にログイン → プロバイダー選択 → チャネル選択 → 「Messaging API設定」タブ → 「チャネルアクセストークン（長期）」の「発行」ボタン
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(3)">次へ進む</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S3: APIキー
+══════════════════════════════ -->
+<div class="screen" id="s3">
+<div class="wrap">
+  <button class="btn-back" onclick="go(2)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 3 / 7</span><span>Anthropic APIキー</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:42%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot done">①プラン</div>
+      <div class="prog-dot done">②LINE</div>
+      <div class="prog-dot cur">③API</div>
+      <div class="prog-dot">④コード</div>
+      <div class="prog-dot">⑤GAS</div>
+      <div class="prog-dot">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-num">STEP 3</div>
+    <h2 class="card-h">Anthropic APIキーを入力</h2>
+
+    <div class="ill">
+      <svg width="100%" viewBox="0 0 540 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="536" height="96" rx="12" fill="white" stroke="#e5e5e5" stroke-width="1.5"/>
+        <rect x="20" y="16" width="100" height="12" rx="3" fill="#d97706"/>
+        <text x="70" y="25" text-anchor="middle" font-size="8" fill="white" font-family="sans-serif" font-weight="700">Anthropic</text>
+        <text x="20" y="48" font-size="11" fill="#333" font-family="sans-serif" font-weight="700">API Keys</text>
+        <text x="20" y="66" font-size="10" fill="#666" font-family="sans-serif">Create a new API key</text>
+        <rect x="20" y="72" width="360" height="18" rx="4" fill="#f5f5f5" stroke="#ddd"/>
+        <text x="30" y="84" font-size="9" fill="#999" font-family="monospace">sk-ant-api03-xxxxxxxxxxxxxxx...</text>
+        <rect x="390" y="72" width="70" height="18" rx="4" fill="#d97706"/>
+        <text x="425" y="84" text-anchor="middle" font-size="9" fill="white" font-family="sans-serif" font-weight="700">Create Key</text>
+      </svg>
+      <div class="ill-cap">Anthropic Console → API Keys → Create Key でキーを作成・コピー</div>
+    </div>
+
+    <div class="inp-wrap">
+      <input class="inp" id="apikey" placeholder="sk-ant- で始まるAPIキーを貼り付け" oninput="vKey()" autocomplete="off" spellcheck="false">
+      <span class="inp-ico" id="keyIco"></span>
+    </div>
+    <div class="inp-err" id="keyErr">APIキーを入力してください</div>
+    <div class="inp-err" id="keyWrn" style="color:#d97706">APIキーは通常 <code>sk-ant-</code> で始まります。正しいキーか確認してください</div>
+
+    <div class="box box-yellow" style="margin-top:16px">
+      <div class="box-t">&#9888; APIクレジットの購入が必要です</div>
+      <a href="https://console.anthropic.com/" target="_blank" style="color:#854d0e">Anthropic Console</a> → Billing → クレジットカードを登録して残高をチャージしてください（$5〜推奨）
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(4)">コードを生成する</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S4: コード生成
+══════════════════════════════ -->
+<div class="screen" id="s4">
+<div class="wrap">
+  <button class="btn-back" onclick="go(3)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 4 / 7</span><span>コード生成</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:56%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot done">①プラン</div>
+      <div class="prog-dot done">②LINE</div>
+      <div class="prog-dot done">③API</div>
+      <div class="prog-dot cur">④コード</div>
+      <div class="prog-dot">⑤GAS</div>
+      <div class="prog-dot">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-num">STEP 4</div>
+    <h2 class="card-h">セットアップコードが生成されました</h2>
+    <p style="font-size:14px;color:var(--sub);margin-bottom:8px">
+      選択プラン：<strong id="planLabel">汎用版</strong>
+    </p>
+
+    <div class="code-wrap">
+      <pre class="code-block" id="genCode"></pre>
+      <button class="cp-btn" id="cpBtn" onclick="cpCode()">コピー</button>
+    </div>
+
+    <div class="box box-green" style="margin-top:16px">
+      <div class="box-t">&#10003; このコードを次のステップでGASに貼り付けます</div>
+      「コピー」ボタンでクリップボードにコピーしてから次へ進んでください。
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(5)">次へ進む（GASに貼り付け）</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S5: GAS設定
+══════════════════════════════ -->
+<div class="screen" id="s5">
+<div class="wrap">
+  <button class="btn-back" onclick="go(4)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 5 / 7</span><span>GASにコードを設定</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:70%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot done">①プラン</div>
+      <div class="prog-dot done">②LINE</div>
+      <div class="prog-dot done">③API</div>
+      <div class="prog-dot done">④コード</div>
+      <div class="prog-dot cur">⑤GAS</div>
+      <div class="prog-dot">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <!-- 5A: GASプロジェクト作成 -->
+  <div class="card">
+    <div class="card-num">STEP 5-A　GASプロジェクトを作成</div>
+    <h2 class="card-h">Google Apps Script を新規作成してコード貼り付け</h2>
+
+    <div class="ill">
+      <svg width="100%" viewBox="0 0 540 110" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="536" height="106" rx="12" fill="white" stroke="#e5e5e5" stroke-width="1.5"/>
+        <rect x="2" y="2" width="536" height="30" rx="12" fill="#f8f8f8"/>
+        <text x="20" y="21" font-size="12" fill="#4285f4" font-family="sans-serif" font-weight="700">Apps Script</text>
+        <text x="130" y="21" font-size="10" fill="#666" font-family="sans-serif">新しいプロジェクト</text>
+        <!-- ファイルツリー -->
+        <rect x="10" y="40" width="120" height="60" rx="6" fill="#f8f9fa" stroke="#e5e5e5"/>
+        <text x="20" y="58" font-size="10" fill="#333" font-family="sans-serif">ファイル</text>
+        <text x="24" y="76" font-size="10" fill="#4285f4" font-family="monospace" font-weight="700">コード.gs</text>
+        <text x="24" y="92" font-size="9" fill="#999" font-family="monospace">appsscript.json</text>
+        <!-- エディタ -->
+        <rect x="140" y="40" width="390" height="60" rx="6" fill="#1e293b"/>
+        <text x="155" y="58" font-size="10" fill="#94a3b8" font-family="monospace">// ← ここに全て選択して貼り付け</text>
+        <text x="155" y="74" font-size="10" fill="#7dd3fc" font-family="monospace">function setupLineAI() {</text>
+        <text x="155" y="90" font-size="10" fill="#94a3b8" font-family="monospace">  ...</text>
+      </svg>
+      <div class="ill-cap">GASのコード.gsにSTEP 4のコードを貼り付けて保存</div>
+    </div>
+
+    <ul class="slist">
+      <li class="slist-item">
+        <div class="sn">1</div>
+        <div class="sb">
+          <a href="https://script.google.com/home" target="_blank"><strong>Google Apps Script</strong></a> を開く →「<strong>新しいプロジェクト</strong>」をクリック
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">2</div>
+        <div class="sb">
+          デフォルトの <code>コード.gs</code> の中身を<strong>全て選択して削除</strong>し、STEP 4でコピーしたコードを<strong>貼り付け</strong>
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">3</div>
+        <div class="sb">
+          <strong>Ctrl+S</strong>（Mac: <strong>Cmd+S</strong>）で保存
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 5B: appsscript.json -->
+  <div class="card">
+    <div class="card-num">STEP 5-B　appsscript.json を差し替え</div>
+    <h2 class="card-h">OAuth スコープ設定を差し替える</h2>
+
+    <ul class="slist">
+      <li class="slist-item">
+        <div class="sn">4</div>
+        <div class="sb">
+          左メニューの歯車アイコン「<strong>プロジェクトの設定</strong>」を開く →「<strong>appsscript.json マニフェストファイルをエディタで表示する</strong>」にチェック
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">5</div>
+        <div class="sb">
+          エディタに戻り <code>appsscript.json</code> を開いて、中身を以下に差し替え → 保存
+        </div>
+      </li>
+    </ul>
+
+    <div class="code-wrap">
+      <pre class="code-block" id="jsonCode">{
+  "timeZone": "Asia/Tokyo",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/tasks"
+  ],
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE_ANONYMOUS"
+  }
+}</pre>
+      <button class="cp-btn" id="jsonCpBtn" onclick="cpJson()">コピー</button>
+    </div>
+  </div>
+
+  <button class="btn" onclick="go(6)">次へ進む（関数実行・デプロイ）</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S6: 権限・デプロイ・Webhook
+══════════════════════════════ -->
+<div class="screen" id="s6">
+<div class="wrap">
+  <button class="btn-back" onclick="go(5)">&larr; 戻る</button>
+  <div class="prog-bar">
+    <div class="prog-label"><span>STEP 6 / 7</span><span>関数実行・デプロイ・Webhook登録</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:85%"></div></div>
+    <div class="prog-steps">
+      <div class="prog-dot done">①プラン</div>
+      <div class="prog-dot done">②LINE</div>
+      <div class="prog-dot done">③API</div>
+      <div class="prog-dot done">④コード</div>
+      <div class="prog-dot done">⑤GAS</div>
+      <div class="prog-dot cur">⑥権限</div>
+      <div class="prog-dot">⑦完了</div>
+    </div>
+  </div>
+
+  <!-- 6A: 関数実行 -->
+  <div class="card">
+    <div class="card-num">STEP 6-A　2つの関数を実行する</div>
+    <h2 class="card-h">setupLineAI → testAllPermissions の順に実行</h2>
+
+    <div class="ill">
+      <svg width="100%" viewBox="0 0 540 120" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="536" height="116" rx="12" fill="white" stroke="#e5e5e5" stroke-width="1.5"/>
+        <rect x="2" y="2" width="536" height="36" rx="12" fill="#f8f8f8"/>
+        <text x="20" y="24" font-size="12" fill="#4285f4" font-family="sans-serif" font-weight="700">Apps Script</text>
+        <rect x="180" y="8" width="140" height="22" rx="6" fill="#e8f0fe" stroke="#4285f4" stroke-width="1.5"/>
+        <text x="250" y="23" text-anchor="middle" font-size="11" fill="#4285f4" font-family="monospace" font-weight="700">setupLineAI &#9662;</text>
+        <rect x="326" y="8" width="60" height="22" rx="6" fill="#4285f4"/>
+        <text x="356" y="23" text-anchor="middle" font-size="11" fill="white" font-family="sans-serif" font-weight="700">&#9654; 実行</text>
+        <path d="M250 44 L250 65" stroke="#4285f4" stroke-width="2" stroke-dasharray="4 3"/>
+        <text x="264" y="58" font-size="10" fill="#4285f4" font-family="sans-serif" font-weight="700">&#9312; まずこちらを実行</text>
+        <rect x="50" y="72" width="200" height="22" rx="6" fill="#dcfce7" stroke="#06C755" stroke-width="1.5"/>
+        <text x="150" y="87" text-anchor="middle" font-size="10" fill="#166534" font-family="monospace" font-weight="700">testAllPermissions &#9662;</text>
+        <rect x="256" y="72" width="60" height="22" rx="6" fill="#06C755"/>
+        <text x="286" y="87" text-anchor="middle" font-size="11" fill="white" font-family="sans-serif" font-weight="700">&#9654; 実行</text>
+        <text x="330" y="80" font-size="10" fill="#06C755" font-family="sans-serif" font-weight="700">&#9313; 次にこちらを実行</text>
+        <text x="330" y="94" font-size="10" fill="#06C755" font-family="sans-serif">&#8594; 権限を全て許可</text>
+      </svg>
+      <div class="ill-cap">GASの上部ツールバーにある関数選択欄でそれぞれ選んで &#9654; 実行</div>
+    </div>
+
+    <ul class="slist">
+      <li class="slist-item">
+        <div class="sn">1</div>
+        <div class="sb">
+          GASの上部の関数選択欄で <code>setupLineAI</code> を選んで <strong>&#9654; 実行</strong>
+          <div class="sb-note">&#128161;「このアプリはGoogleで確認されていません」と出たら &#8594; 「詳細」をクリック &#8594; 「（プロジェクト名）に移動（安全ではないページ）」をクリック &#8594; 「許可」で進んでOKです</div>
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">2</div>
+        <div class="sb">
+          次に <code>testAllPermissions</code> を選んで <strong>&#9654; 実行</strong> &#8594; 表示されるすべての権限を「<strong>許可</strong>」する
+          <div class="sb-note">&#128161; Gmail・カレンダー・ドライブなど複数の許可画面が出ます。全部許可してください</div>
+          <div class="sb-warn">&#9888; エラーが出た場合は STEP 5-B の appsscript.json の差し替えが完了しているか確認してください</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6B: デプロイ -->
+  <div class="card">
+    <div class="card-num">STEP 6-B　デプロイしてURLを取得</div>
+    <h2 class="card-h">「デプロイ」でWebhook URLを発行する</h2>
+
+    <div class="ill">
+      <svg width="100%" viewBox="0 0 540 130" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="536" height="126" rx="12" fill="white" stroke="#e5e5e5" stroke-width="1.5"/>
+        <rect x="2" y="2" width="536" height="30" rx="12" fill="#f8f8f8"/>
+        <rect x="380" y="6" width="100" height="22" rx="6" fill="#4285f4"/>
+        <text x="430" y="21" text-anchor="middle" font-size="11" fill="white" font-family="sans-serif" font-weight="700">デプロイ &#9662;</text>
+        <text x="430" y="44" text-anchor="middle" font-size="10" fill="#dc2626" font-family="sans-serif" font-weight="700">&#8592; &#9312; クリック</text>
+        <rect x="300" y="50" width="200" height="60" rx="8" fill="white" stroke="#ddd" stroke-width="1" style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.1))"/>
+        <rect x="308" y="58" width="184" height="22" rx="5" fill="#4285f4"/>
+        <text x="400" y="73" text-anchor="middle" font-size="11" fill="white" font-family="sans-serif" font-weight="700">新しいデプロイ</text>
+        <text x="400" y="94" text-anchor="middle" font-size="10" fill="#888" font-family="sans-serif">デプロイを管理</text>
+        <text x="300" y="50" font-size="10" fill="#dc2626" font-family="sans-serif" font-weight="700">&#8592; &#9313; 「新しいデプロイ」をクリック</text>
+        <rect x="30" y="46" width="240" height="72" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+        <text x="150" y="66" text-anchor="middle" font-size="11" fill="#166534" font-family="sans-serif" font-weight="700">設定内容</text>
+        <text x="42" y="83" font-size="10" fill="#333" font-family="sans-serif">種類：<tspan font-weight="700">ウェブアプリ</tspan></text>
+        <text x="42" y="99" font-size="10" fill="#333" font-family="sans-serif">アクセスできるユーザー：<tspan font-weight="700">全員</tspan></text>
+        <text x="42" y="112" font-size="10" fill="#06C755" font-family="sans-serif" font-weight="700">&#8594; 「デプロイ」ボタンを押す</text>
+      </svg>
+      <div class="ill-cap">右上「デプロイ」&#8594;「新しいデプロイ」&#8594; 種類：ウェブアプリ、アクセス：全員 &#8594; デプロイ</div>
+    </div>
+
+    <ul class="slist">
+      <li class="slist-item">
+        <div class="sn">3</div>
+        <div class="sb">
+          GAS右上の「<strong>デプロイ</strong>」&#8594;「<strong>新しいデプロイ</strong>」をクリック
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">4</div>
+        <div class="sb">
+          種類：<strong>ウェブアプリ</strong>を選択 &#8594; アクセスできるユーザー：<strong>全員</strong>を選択 &#8594;「<strong>デプロイ</strong>」ボタンをクリック
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">5</div>
+        <div class="sb">
+          表示された<strong>ウェブアプリのURL</strong>（https://script.google.com/macros/s/...）をコピーして手元に保存
+          <div class="sb-note">&#128161; このURLがLINEとGASをつなぐ「Webhook URL」になります</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6C: Webhook -->
+  <div class="card">
+    <div class="card-num">STEP 6-C　WebhookをLINEに登録</div>
+    <h2 class="card-h">コピーしたURLをLINEに登録</h2>
+
+    <ul class="slist">
+      <li class="slist-item">
+        <div class="sn">6</div>
+        <div class="sb">
+          <a href="https://developers.line.biz/" target="_blank"><strong>LINE Developers</strong></a> &#8594; チャンネル &#8594; 「Messaging API設定」タブ を開く
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">7</div>
+        <div class="sb">
+          「<strong>Webhook URL</strong>」の欄にコピーしたURLを貼り付け &#8594; 「<strong>更新</strong>」ボタンをクリック
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">8</div>
+        <div class="sb">
+          「<strong>Webhookの利用</strong>」がONになっていることを確認 &#8594; 「<strong>検証</strong>」ボタンをクリック &#8594; 「<strong>成功</strong>」と出ればOK
+          <div class="sb-warn">&#9888;「失敗」と出た場合はデプロイ時に種類が「ウェブアプリ」・アクセスが「全員」になっているか確認してください</div>
+        </div>
+      </li>
+      <li class="slist-item">
+        <div class="sn">9</div>
+        <div class="sb">
+          LINEで「<strong>こんにちは</strong>」と送ってAIが返事してきたら完了！
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <button class="btn" onclick="go(7)">完了しました！</button>
+</div>
+</div>
+
+<!-- ══════════════════════════════
+     S7: アカウント登録 → 完了
+══════════════════════════════ -->
+<div class="screen" id="s7">
+<div class="wrap">
+  <div class="prog-bar">
+    <div class="prog-track"><div class="prog-fill" style="width:100%"></div></div>
+  </div>
+
+  <!-- 登録フォーム（送信前のみ表示） -->
+  <div class="card" id="regForm">
+    <div class="card-num">最後のステップ</div>
+    <h2 class="card-h">店舗情報を登録</h2>
+    <p style="font-size:14px;color:var(--sub);margin-bottom:16px">管理画面にアカウントを登録します。LINEトークンやAPIキーは送信されません。</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">店舗・事業者名 <span style="color:var(--err)">*</span></label>
+        <input class="inp" id="regName" placeholder="例: 美容室 BLOOM" />
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">業種（任意）</label>
+        <input class="inp" id="regIndustry" placeholder="例: 美容室、整体院、介護事業所" />
+      </div>
+    </div>
+    <div id="regErr" style="display:none;color:var(--err);font-size:13px;margin-top:8px"></div>
+    <button class="btn" style="margin-top:16px" onclick="submitSetup()">登録してセットアップを完了する</button>
+    <p style="font-size:12px;color:var(--sub);margin-top:8px;text-align:center">&#128274; トークン・APIキーは送信されません</p>
+  </div>
+
+  <!-- 完了画面（送信後に表示） -->
+  <div class="card" id="regDone" style="display:none">
+    <div class="done-wrap">
+      <span class="done-icon">&#127881;</span>
+      <div class="done-title">LINE AI秘書<em>セットアップ完了！</em></div>
+      <p class="done-sub">LINEでさっそく試してみましょう</p>
+    </div>
+
+    <div id="cmdGeneral">
+      <div class="cmd-grid">
+        <div class="cmd"><div class="cmd-txt">「今日の予定は？」</div><div class="cmd-desc">Googleカレンダーを確認</div></div>
+        <div class="cmd"><div class="cmd-txt">「メール確認して」</div><div class="cmd-desc">Gmailの未読を表示</div></div>
+        <div class="cmd"><div class="cmd-txt">「明日10時にMTG」</div><div class="cmd-desc">予定をすぐ追加</div></div>
+        <div class="cmd"><div class="cmd-txt">「ヘルプ」</div><div class="cmd-desc">全機能のメニュー</div></div>
+      </div>
+    </div>
+
+    <div id="cmdCare" style="display:none">
+      <div class="cmd-grid">
+        <div class="cmd"><div class="cmd-txt">「今日の予定教えて」</div><div class="cmd-desc">担当利用者の訪問予定を確認</div></div>
+        <div class="cmd"><div class="cmd-txt">「会議まとめて」</div><div class="cmd-desc">担当者会議の議事録を作成</div></div>
+        <div class="cmd"><div class="cmd-txt">「火曜10時に担当者会議」</div><div class="cmd-desc">カレンダーに予定登録</div></div>
+        <div class="cmd"><div class="cmd-txt">「申し送りメモ」</div><div class="cmd-desc">利用者の申し送り事項を記録</div></div>
+      </div>
+    </div>
+
+    <div class="box box-green">
+      <div class="box-t">&#128161; まず「ヘルプ」と送ってみましょう</div>
+      機能がカードメニューで表示されます。各カードをタップすると詳しい使い方が出ます。
+    </div>
+
+  </div>
+
+  <button class="btn-ghost" onclick="show('s0')">&#8592; 別のアカウントをセットアップする</button>
+  <div class="ft"><a href="https://itsudemo-hisho.com" target="_blank">いつでも秘書</a> by 株式会社おもせか</div>
+</div>
+</div>
+
+</main>
+
+<script>
+var LU='https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3RF3SJVIKuIG0WFGyMzmlbvy--O9qqoDiXLi4zP4O-xw/exec';
+var MD='1SrEvMuCcXjgPByRZDlPVEGaWuMrbKbnFk5Z_KYarGRI';
+var GH='https://raw.githubusercontent.com/yousuke912/line-ai-setup/main/main_minified.gs';
+var CMS_URL='https://itsudemo-hisho.com/api/setup/complete';
+var jobType='general';
+
+var STEPS={s0:'セットアップ',s1:'STEP 1/7 プラン選択',s2:'STEP 2/7 LINEトークン',s3:'STEP 3/7 APIキー',s4:'STEP 4/7 コード生成',s5:'STEP 5/7 GAS設定',s6:'STEP 6/7 権限・デプロイ',s7:'完了'};
+var JOB_LABELS={'general':'汎用版（スタンダード）','care_manager':'居宅ケアマネ版','visiting_care':'訪問介護版','visiting_nurse':'訪問看護版'};
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  document.getElementById('hdStep').textContent=STEPS[id]||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function go(n){
+  if(n===2){/* validate nothing for plan step, just proceed */}
+  if(n===3){
+    var t=document.getElementById('tok').value.trim();
+    if(!t){document.getElementById('tokErr').style.display='block';document.getElementById('tok').classList.add('ng');return;}
+  }
+  if(n===4){
+    var k=document.getElementById('apikey').value.trim();
+    if(!k){document.getElementById('keyErr').style.display='block';document.getElementById('apikey').classList.add('ng');return;}
+    genCode();
+  }
+  if(n===7){
+    // 登録フォーム表示、完了画面非表示
+    document.getElementById('regForm').style.display='block';
+    document.getElementById('regDone').style.display='none';
+  }
+  show('s'+n);
+}
+
+function selJob(type,el){
+  if(type==='visiting_care'||type==='visiting_nurse') return;
+  jobType=type;
+  document.querySelectorAll('.jt-card').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+}
+
+function genCode(){
+  var t=document.getElementById('tok').value.trim();
+  var k=document.getElementById('apikey').value.trim();
+  document.getElementById('planLabel').textContent=JOB_LABELS[jobType]||'汎用版';
+
+  document.getElementById('genCode').textContent=
+'/**\n'+
+' * LINE AI秘書 v3.5 ローダー（自動生成）\n'+
+' * プラン: '+JOB_LABELS[jobType]+'\n'+
+' * copyright 株式会社おもせか\n'+
+' *\n'+
+' * このコードをGASに全文貼り付けて保存してください\n'+
+' * 保存後に setupLineAI → testAllPermissions の順で実行してください\n'+
+' */\n'+
+'\n'+
+'// ── セットアップ（初回1回だけ実行）\n'+
+'function setupLineAI() {\n'+
+'  var props = PropertiesService.getScriptProperties();\n'+
+'  props.setProperties({\n'+
+'    "LINE_CHANNEL_ACCESS_TOKEN": "'+t+'",\n'+
+'    "ANTHROPIC_API_KEY":         "'+k+'",\n'+
+'    "LOADER_URL":                "'+LU+'",\n'+
+'    "MAIN_CODE_DOC_ID":          "'+MD+'",\n'+
+'    "LOADER_CODE_URL":           "'+GH+'"\n'+
+'  });\n'+
+'  Logger.log("プロパティ設定完了！次は testAllPermissions を実行してください");\n'+
+'}\n'+
+'\n'+
+'// ── ローダー本体 ────────────────────────\n'+
+'function getLoaderUrl() {\n'+
+'  return PropertiesService.getScriptProperties().getProperty("LOADER_URL") || "";\n'+
+'}\n'+
+'\n'+
+'function getRemoteCode() {\n'+
+'  var cache = CacheService.getScriptCache();\n'+
+'  var cacheKey = "remote_code_v1";\n'+
+'  var code = cache.get(cacheKey);\n'+
+'  if (code) return code;\n'+
+'\n'+
+'  // GitHub直接取得（優先）\n'+
+'  var alt = PropertiesService.getScriptProperties().getProperty("LOADER_CODE_URL");\n'+
+'  if (alt) {\n'+
+'    try {\n'+
+'      var res = UrlFetchApp.fetch(alt, { muteHttpExceptions: true });\n'+
+'      var txt = res.getContentText();\n'+
+'      if (txt && txt.indexOf("function") !== -1) {\n'+
+'        try { cache.put(cacheKey, txt, 3600); } catch(ce) {}\n'+
+'        return txt;\n'+
+'      }\n'+
+'    } catch(e) {}\n'+
+'  }\n'+
+'\n'+
+'  // フォールバック：設定サーバー経由\n'+
+'  var loaderUrl = getLoaderUrl();\n'+
+'  if (!loaderUrl) { Logger.log("LOADER_URL が未設定です"); return null; }\n'+
+'  try {\n'+
+'    var sep = loaderUrl.indexOf("?") === -1 ? "?" : "&";\n'+
+'    var res = UrlFetchApp.fetch(loaderUrl + sep + "type=code", { muteHttpExceptions: true });\n'+
+'    var txt = res.getContentText();\n'+
+'    if (!txt || txt.indexOf("function") === -1) { return null; }\n'+
+'    try { cache.put(cacheKey, txt, 3600); } catch(ce) {}\n'+
+'    return txt;\n'+
+'  } catch(e) { Logger.log("コード取得エラー: " + e.toString()); return null; }\n'+
+'}\n'+
+'\n'+
+'function loadAndExec(funcName, arg) {\n'+
+'  var code = getRemoteCode();\n'+
+'  if (!code) return ContentService.createTextOutput("OK");\n'+
+'  try {\n'+
+'    var fn = eval("(function(){\\n" + code + "\\nreturn typeof " + funcName + \' !== "undefined" ? \' + funcName + " : null;\\n})()");\n'+
+'    if (typeof fn === "function") {\n'+
+'      var result = fn(arg);\n'+
+'      return result !== undefined ? result : ContentService.createTextOutput("OK");\n'+
+'    }\n'+
+'    Logger.log("関数が見つかりません: " + funcName);\n'+
+'  } catch(e) {\n'+
+'    var errStr = e.toString();\n'+
+'    var cfg = PropertiesService.getScriptProperties();\n'+
+'    var tok = cfg.getProperty("LINE_CHANNEL_ACCESS_TOKEN");\n'+
+'    var uid = cfg.getProperty("LINE_USER_ID");\n'+
+'    var msg;\n'+
+'    if (errStr.indexOf("Unexpected token") !== -1) {\n'+
+'      msg = "APIクレジット残高が不足している可能性があります\\n\\nhttps://console.anthropic.com → Billing\\nで残高をご確認ください";\n'+
+'    } else {\n'+
+'      msg = "エラーが発生しました\\n\\n" + errStr + "\\n\\nAPIクレジット残高もご確認ください\\nhttps://console.anthropic.com → Billing";\n'+
+'    }\n'+
+'    try {\n'+
+'      if (tok && uid) {\n'+
+'        UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {\n'+
+'          method: "post", contentType: "application/json",\n'+
+'          headers: { Authorization: "Bearer " + tok },\n'+
+'          payload: JSON.stringify({ to: uid, messages: [{ type: "text", text: msg }] }),\n'+
+'          muteHttpExceptions: true\n'+
+'        });\n'+
+'      }\n'+
+'    } catch(e2) {}\n'+
+'  }\n'+
+'  return ContentService.createTextOutput("OK");\n'+
+'}\n'+
+'\n'+
+'// ── トリガー関数 ────────────────────────\n'+
+'function doPost(e) { return loadAndExec("doPost", e); }\n'+
+'function checkReminders() { loadAndExec("checkReminders", null); }\n'+
+'function morningBriefing() { loadAndExec("morningBriefing", null); }\n'+
+'function dailyCheck() { loadAndExec("dailyCheck", null); }\n'+
+'\n'+
+'// ── セットアップ確認 ────────────────────\n'+
+'function testAllPermissions() { loadAndExec("testAllPermissions", null); }\n'+
+'function testSetup() { loadAndExec("testSetup", null); }\n'+
+'\n'+
+'// ── ユーティリティ ──────────────────────\n'+
+'function clearCodeCache() {\n'+
+'  CacheService.getScriptCache().remove("remote_code_v1");\n'+
+'  Logger.log("キャッシュをクリアしました。次回アクセスで最新コードを取得します。");\n'+
+'}\n'+
+'\n'+
+'function checkConnection() {\n'+
+'  var url = getLoaderUrl();\n'+
+'  if (!url) { Logger.log("NG: LOADER_URL未設定"); return; }\n'+
+'  try {\n'+
+'    var sep = url.indexOf("?") === -1 ? "?" : "&";\n'+
+'    var data = JSON.parse(UrlFetchApp.fetch(url + sep + "type=version", { muteHttpExceptions: true }).getContentText());\n'+
+'    if (data._status === "ok") { Logger.log("接続OK / v" + data.version); }\n'+
+'    else { Logger.log("接続エラー: " + JSON.stringify(data)); }\n'+
+'  } catch(e) { Logger.log("接続エラー: " + e.toString()); }\n'+
+'}';
+}
+
+function vTok(){
+  var v=document.getElementById('tok').value.trim();
+  var el=document.getElementById('tok');
+  var ic=document.getElementById('tokIco');
+  document.getElementById('tokErr').style.display='none';
+  if(v.length>10){el.classList.remove('ng');el.classList.add('ok');ic.textContent='\u2705';}
+  else{el.classList.remove('ok');ic.textContent='';}
+}
+function vKey(){
+  var v=document.getElementById('apikey').value.trim();
+  var el=document.getElementById('apikey');
+  var ic=document.getElementById('keyIco');
+  var wn=document.getElementById('keyWrn');
+  document.getElementById('keyErr').style.display='none';
+  if(!v){ic.textContent='';return;}
+  if(v.indexOf('sk-ant-')===0){el.classList.remove('ng');el.classList.add('ok');ic.textContent='\u2705';wn.style.display='none';}
+  else{el.classList.remove('ok');el.classList.add('ng');ic.textContent='\u26A0\uFE0F';wn.style.display='block';}
+}
+function cpCode(){
+  navigator.clipboard.writeText(document.getElementById('genCode').textContent).then(function(){
+    var b=document.getElementById('cpBtn');b.textContent='\u30B3\u30D4\u30FC\u6E08\u307F \u2713';b.classList.add('done');
+    setTimeout(function(){b.textContent='\u30B3\u30D4\u30FC';b.classList.remove('done');},3000);
+  });
+}
+function cpJson(){
+  navigator.clipboard.writeText(document.getElementById('jsonCode').textContent).then(function(){
+    var b=document.getElementById('jsonCpBtn');b.textContent='\u30B3\u30D4\u30FC\u6E08\u307F \u2713';b.classList.add('done');
+    setTimeout(function(){b.textContent='\u30B3\u30D4\u30FC';b.classList.remove('done');},3000);
+  });
+}
+function submitSetup(){
+  var name=document.getElementById('regName').value.trim();
+  if(!name){
+    document.getElementById('regErr').style.display='block';
+    document.getElementById('regErr').textContent='店舗名を入力してください';
+    return;
+  }
+  document.getElementById('regErr').style.display='none';
+  var industry=document.getElementById('regIndustry').value.trim();
+  var btn=document.querySelector('#regForm .btn');
+  btn.textContent='登録中...';btn.disabled=true;
+  fetch(CMS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,industry:industry,job_type:jobType,plan:'standard'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.success){
+      document.getElementById('regForm').style.display='none';
+      document.getElementById('regDone').style.display='block';
+      // Show appropriate commands
+      if(jobType==='care_manager'){
+        document.getElementById('cmdGeneral').style.display='none';
+        document.getElementById('cmdCare').style.display='block';
+      }else{
+        document.getElementById('cmdGeneral').style.display='block';
+        document.getElementById('cmdCare').style.display='none';
+      }
+    }else{
+      document.getElementById('regErr').style.display='block';
+      document.getElementById('regErr').textContent=d.error||'登録に失敗しました';
+      btn.textContent='登録してセットアップを完了する';btn.disabled=false;
+    }
+  }).catch(function(){
+    // CMS連携失敗でも完了画面は表示（セットアップ自体は成功しているため）
+    document.getElementById('regForm').style.display='none';
+    document.getElementById('regDone').style.display='block';
+    if(jobType==='care_manager'){
+      document.getElementById('cmdGeneral').style.display='none';
+      document.getElementById('cmdCare').style.display='block';
+    }
+  });
+}
+function toggleChk(el){
+  var box=el.querySelector('.chk-box');
+  box.classList.toggle('checked');
+  box.textContent=box.classList.contains('checked')?'\u2713':'';
+}
+</script>
+</body>
+</html>
