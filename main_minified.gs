@@ -159,9 +159,10 @@ for(var ti=0;ti<content.length;ti++){if(content[ti].type!=='tool_use')continue;
 var tn=content[ti].name,tr=executeTool(tn,content[ti].input,uid);_usedTools.push(tn);
 if(tr==='__SENT__'){_alreadySent=true;break;}
 toolResults.push({type:'tool_result',tool_use_id:content[ti].id,content:typeof tr==='string'&&tr.length>1500?tr.slice(0,1500)+'…（省略）':tr});}
-if(_alreadySent)break;
+if(_alreadySent){finalReply='__SENT__';break;}
 history.push({role:'user',content:toolResults});continue;}
 finalReply='処理できませんでした。もう一度お試しください。';break;}
+if(finalReply==='__SENT__')return null;
 if(!finalReply)finalReply='エラーが発生しました。\n繰り返す場合はAPIクレジット残高をご確認: https://console.anthropic.com → Billing';
 try{var _vR=finalReply,_vT=_usedTools.join(','),_vM=message,_vS=/保存した|メモした|記録した|追加した|登録した|入れた|しといた|完了.*[!！✨]/.test(_vR),_vD=/削除した|消した|取り消した|除した/.test(_vR),_vDn=/完了にした|完了した(?!.*タスク)/.test(_vR),_vF=false;
 if(/^メモ[\s\n]|メモ[にをへ]?(追加|保存|記録|して|しといて)/.test(_vM)&&_vS&&_vT.indexOf('memo_add')===-1)_vF=true;
@@ -711,9 +712,9 @@ return lines.join('\n');
 function toolRouteSearch(input,uid) {
 var f=input.from,t=input.to,mode=input.mode||'transit',dep=input.depart||'';
 var ml={transit:'電車・バス',driving:'車',walking:'徒歩',bicycling:'自転車'};
-var r='🗺 経路情報\n出発: '+f+'\n到着: '+t+'\n移動手段: '+(ml[mode]||'電車・バス')+'\n';
+var r='はい！経路を調べたよ！🗺✨\n\n出発: '+f+'\n到着: '+t+'\n移動手段: '+(ml[mode]||'電車・バス')+'\n';
 if(dep)r+='出発時刻: '+dep+'\n';
-r+='\n📍 Googleマップで確認:\nhttps://www.google.com/maps/dir/'+encodeURIComponent(f)+'/'+encodeURIComponent(t)+'/?travelmode='+mode+'\n\n※ リンクをタップで時刻表・乗換情報を確認';
+r+='\n📍 Googleマップはこちら👇\nhttps://www.google.com/maps/dir/'+encodeURIComponent(f)+'/'+encodeURIComponent(t)+'/?travelmode='+mode+'\n\nリンクをタップして時刻表・乗換情報を確認してね！😊';
 pushToLine(uid,r);
 return '__SENT__';
 }
