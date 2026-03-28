@@ -154,10 +154,12 @@ for(var ci=0;ci<content.length;ci++)if(content[ci].type==='text'){finalReply=con
 history.push({role:'assistant',content:content});
 if(response.usage){var ur=trackTokenUsage(response.usage.input_tokens,response.usage.output_tokens,props);if(ur.newWarn){var c3=getConfig();if(c3.LINE_TOKEN&&c3.USER_ID)pushToLine(c3.USER_ID,'⚠️ 今月のAPI推定コストが¥'+ur.newWarn+'に達しました\n\n'+getMonthlyUsageText(props));}}break;}
 if(stopReason==='tool_use'){
-history.push({role:'assistant',content:content});var toolResults=[];
+history.push({role:'assistant',content:content});var toolResults=[],_alreadySent=false;
 for(var ti=0;ti<content.length;ti++){if(content[ti].type!=='tool_use')continue;
 var tn=content[ti].name,tr=executeTool(tn,content[ti].input,uid);_usedTools.push(tn);
+if(tr==='__SENT__'){_alreadySent=true;break;}
 toolResults.push({type:'tool_result',tool_use_id:content[ti].id,content:typeof tr==='string'&&tr.length>1500?tr.slice(0,1500)+'…（省略）':tr});}
+if(_alreadySent)break;
 history.push({role:'user',content:toolResults});continue;}
 finalReply='処理できませんでした。もう一度お試しください。';break;}
 if(!finalReply)finalReply='エラーが発生しました。\n繰り返す場合はAPIクレジット残高をご確認: https://console.anthropic.com → Billing';
@@ -706,12 +708,14 @@ while(r.hasNext()){var f=r.next();lines.push((c+1)+'. '+f.getName()+'\n → '+f.
 if(!c)return _notFound(input.keyword,'ファイル');
 return lines.join('\n');
 }
-function toolRouteSearch(input) {
+function toolRouteSearch(input,uid) {
 var f=input.from,t=input.to,mode=input.mode||'transit',dep=input.depart||'';
 var ml={transit:'電車・バス',driving:'車',walking:'徒歩',bicycling:'自転車'};
 var r='🗺 経路情報\n出発: '+f+'\n到着: '+t+'\n移動手段: '+(ml[mode]||'電車・バス')+'\n';
 if(dep)r+='出発時刻: '+dep+'\n';
-return r+'\n📍 Googleマップで確認:\nhttps://www.google.com/maps/dir/'+encodeURIComponent(f)+'/'+encodeURIComponent(t)+'/?travelmode='+mode+'\n\n※ リンクをタップで時刻表・乗換情報を確認';
+r+='\n📍 Googleマップで確認:\nhttps://www.google.com/maps/dir/'+encodeURIComponent(f)+'/'+encodeURIComponent(t)+'/?travelmode='+mode+'\n\n※ リンクをタップで時刻表・乗換情報を確認';
+pushToLine(uid,r);
+return '__SENT__';
 }
 function toolHotelSearch(input) {
 var a=input.area,ci=input.checkin||'',co=input.checkout||'',g=input.guests||1,kw=input.keyword||'',ea=encodeURIComponent(a),ek=kw?encodeURIComponent(kw):'';
