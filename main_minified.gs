@@ -241,8 +241,7 @@ drive:['drive_folder_create','drive_file_list','drive_file_delete','drive_file_m
 memo:['memo_add','memo_view','memo_delete'],task:['task_add','task_view','task_done','task_undone','task_delete','task_restore'],
 reminder:['reminder_add','reminder_view','reminder_delete','birthday_reminder'],briefing:['briefing_setting'],
 tone:['set_tone'],search:['web_search'],weather:['weather'],route:['route_search','hotel_search'],
-url:['url_summarize'],photo:['drive_file_search'],report:['report_generate'],company:['company'],smart:['smart_search'],
-image:['image_generate']};}
+url:['url_summarize'],photo:['drive_file_search'],report:['report_generate'],company:['company'],smart:['smart_search']};}
 function getToolDefinitions() {
 var s=_S,n=_N,b=_B,e=_E;
 return [
@@ -288,8 +287,7 @@ _T('birthday_reminder','誕生日リマインダー',{name:s('名前'),birthday:
 _T('report_generate','レポート生成',{type:e('種類',['weekly','monthly'])},['type']),
 _T('smart_search','横断検索',{keyword:s('KW'),range_days:n('日数')},['keyword']),
 _T('hotel_search','ホテル検索',{area:s('エリア'),checkin:s('CI date'),checkout:s('CO date'),guests:n('人数'),keyword:s('条件')},['area']),
-_T('company','部署メモ管理',{action:e('操作',['view','status']),dept:s('部署名')},['action']),
-_T('image_generate','介護説明画像生成',{prompt:s('画像の内容（日本語で詳しく）'),style:e('スタイル',['4コマ漫画','インフォグラフィック','説明イラスト']),title:s('タイトル（省略可）')},['prompt'])
+_T('company','部署メモ管理',{action:e('操作',['view','status']),dept:s('部署名')},['action'])
 ];
 }
 function selectTools(message) {
@@ -312,8 +310,7 @@ photo:'写真,画像,フォト',
 report:'レポート,週次,月次',
 tone:'口調,トーン,話し方,可愛,タメ口,ため口,敬語,フレンドリー,ビジネス口調,キャラ,喋り方',
 company:'部署,カンパニー,事業,秘書室,line事業,投稿案,介護ブログ,学校コンサル,hp運用,部門,会社,my-company',
-smart:'探して,検索して,何か書いた,何書いた,どこかに,見つけて,先週の,先月の,前に,書いたやつ,記録した',
-image:'画像,イラスト,資料,4コマ,説明資料,チラシ,図解,生成,作って'
+smart:'探して,検索して,何か書いた,何書いた,どこかに,見つけて,先週の,先月の,前に,書いたやつ,記録した'
 };
 var needed = {};
 for (var group in keywords) {
@@ -341,7 +338,7 @@ for (var i = 0; i < list.length; i++) { result[list[i]] = true; }
 }
 return result;
 }
-var _TOOL_MAP={set_tone:toolSetTone,company:toolCompany,gmail_check:toolGmailCheck,gmail_send:toolGmailSend,calendar_view:toolCalView,calendar_add:toolCalAdd,calendar_delete:toolCalDelete,calendar_edit:toolCalEdit,sheets_create:toolSheetsCreate,docs_create:toolDocsCreate,memo_add:toolMemoAdd,memo_view:toolMemoView,memo_delete:toolMemoDelete,reminder_add:toolReminderAdd,reminder_view:toolReminderView,reminder_delete:toolReminderDelete,task_add:toolTaskAdd,task_view:toolTaskView,task_done:toolTaskDone,task_undone:toolTaskUndone,task_delete:toolTaskDelete,task_restore:toolTaskRestore,web_search:toolWebSearch,briefing_setting:toolBriefingSetting,weather:toolWeather,drive_folder_create:function(i,u){if(u!==_KISHI_UID)return'フォルダ作成は現在制限されています';return toolDriveFolderCreate(i);},drive_file_list:toolDriveFileList,drive_file_delete:toolDriveFileDelete,drive_file_move:toolDriveFileMove,drive_file_rename:toolDriveFileRename,drive_file_search:toolDriveFileSearch,route_search:toolRouteSearch,hotel_search:toolHotelSearch,docs_read:toolDocsRead,docs_write:toolDocsWrite,docs_delete:toolDocsDelete,sheets_read:toolSheetsRead,sheets_write:toolSheetsWrite,sheets_delete:toolSheetsDelete,url_summarize:toolUrlSummarize,birthday_reminder:toolBirthdayReminder,report_generate:toolReportGenerate,smart_search:toolSmartSearch,image_generate:toolImageGenerate};
+var _TOOL_MAP={set_tone:toolSetTone,company:toolCompany,gmail_check:toolGmailCheck,gmail_send:toolGmailSend,calendar_view:toolCalView,calendar_add:toolCalAdd,calendar_delete:toolCalDelete,calendar_edit:toolCalEdit,sheets_create:toolSheetsCreate,docs_create:toolDocsCreate,memo_add:toolMemoAdd,memo_view:toolMemoView,memo_delete:toolMemoDelete,reminder_add:toolReminderAdd,reminder_view:toolReminderView,reminder_delete:toolReminderDelete,task_add:toolTaskAdd,task_view:toolTaskView,task_done:toolTaskDone,task_undone:toolTaskUndone,task_delete:toolTaskDelete,task_restore:toolTaskRestore,web_search:toolWebSearch,briefing_setting:toolBriefingSetting,weather:toolWeather,drive_folder_create:function(i,u){if(u!==_KISHI_UID)return'フォルダ作成は現在制限されています';return toolDriveFolderCreate(i);},drive_file_list:toolDriveFileList,drive_file_delete:toolDriveFileDelete,drive_file_move:toolDriveFileMove,drive_file_rename:toolDriveFileRename,drive_file_search:toolDriveFileSearch,route_search:toolRouteSearch,hotel_search:toolHotelSearch,docs_read:toolDocsRead,docs_write:toolDocsWrite,docs_delete:toolDocsDelete,sheets_read:toolSheetsRead,sheets_write:toolSheetsWrite,sheets_delete:toolSheetsDelete,url_summarize:toolUrlSummarize,birthday_reminder:toolBirthdayReminder,report_generate:toolReportGenerate,smart_search:toolSmartSearch};
 function executeTool(name, input, uid) {
 try {
 var fn=_TOOL_MAP[name];
@@ -750,24 +747,6 @@ r+='\n🔴 楽天トラベル\nhttps://travel.rakuten.co.jp/search/result/?f_tei
 r+='\n\n🔵 じゃらん\nhttps://www.jalan.net/search/contentsSearch/?keyword='+ea+(ci?'&checkinDate='+ci.replace(/-/g,''):'')+(co?'&checkoutDate='+co.replace(/-/g,''):'')+'&adultNum='+g;
 r+='\n\n🌐 Booking.com\nhttps://www.booking.com/search.ja.html?ss='+ea+(ci?'&checkin='+ci:'')+(co?'&checkout='+co:'')+'&group_adults='+g;
 return r+'\n\n※ リンクをタップして空室・料金を確認';
-}
-function toolImageGenerate(input, uid) {
-var cs=null;try{cs=_getCmsSettings();}catch(e){}
-if(!cs||cs.job_type!=='care_manager')return 'この機能はケアマネ版でのみ利用できます。';
-var apiKey=_P().getProperty('GEMINI_API_KEY');
-if(!apiKey)return '⚠️ GEMINI_API_KEY が未設定です。スクリプトプロパティに設定してください。';
-var style=input.style||'4コマ漫画';
-var fullPrompt='介護・ケアマネジメントの説明資料。'+style+'形式。日本語テキスト入り。温かみのあるイラスト調。内容: '+input.prompt;
-try{
-var res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-004:predict?key='+apiKey,{method:'post',contentType:'application/json',payload:JSON.stringify({instances:[{prompt:fullPrompt}],parameters:{sampleCount:1,aspectRatio:'3:2'}}),muteHttpExceptions:true});
-var data=_safeJson(res.getContentText());
-if(!data||!data.predictions||!data.predictions[0])return '⚠️ 画像生成に失敗しました: '+res.getContentText().slice(0,200);
-var b64=data.predictions[0].bytesBase64Encoded;
-var blob=Utilities.newBlob(Utilities.base64Decode(b64),'image/png',(input.title||'介護説明資料')+'_'+_F(new Date(),'yyyyMMdd_HHmm')+'.png');
-var file=DriveApp.createFile(blob);
-file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
-return '🎨 画像を生成しました！\n\n'+(input.title||'介護説明資料')+'\n\n📎 '+file.getUrl()+'\n\n※ リンクをタップして確認してください';
-}catch(e){return '⚠️ 画像生成エラー: '+e.toString();}
 }
 function _searchDrive(kw,mime,exact){return DriveApp.searchFiles('title '+(exact?'= ':'contains ')+'"'+kw+'" and mimeType = "'+mime+'" and trashed = false');}
 function toolDocsRead(input) {
