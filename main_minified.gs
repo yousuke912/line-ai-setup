@@ -431,14 +431,18 @@ if(!matched.length)return _notFound(input.keyword,'予定');
 if(input.index&&input.index>=1&&input.index<=matched.length)matched=[matched[input.index-1]];
 if(matched.length>1)return'複数見つかりました。どれを変更しますか？番号で指定してください。\n'+_evList(matched);
 var ev=matched[0],oS=ev.getStartTime(),dur=ev.getEndTime().getTime()-oS.getTime();
-if(input.new_title)ev.setTitle(input.new_title);
-if(input.new_location)ev.setLocation(input.new_location);
-if(input.new_start){var ns=new Date(input.new_start);if(isNaN(ns.getTime()))return'日時の形式が正しくありません: '+input.new_start;
+var changed=false;
+if(input.new_title){ev.setTitle(input.new_title);changed=true;}
+if(input.new_location){ev.setLocation(input.new_location);changed=true;}
+if(input.new_start){
+var ns=new Date(input.new_start);if(isNaN(ns.getTime()))return'日時の形式が正しくありません: '+input.new_start;
 if(ns.getFullYear()<2000){ns=new Date(oS);var tp=input.new_start.match(/(\d{1,2}):(\d{2})/);if(tp)ns.setHours(parseInt(tp[1]),parseInt(tp[2]),0,0);}
 var ne=input.new_end?new Date(input.new_end):new Date(ns.getTime()+dur);
-try{ev.setTime(ns,ne);}catch(se){return'変更に失敗しました。編集権限がない可能性: '+ev.getTitle();}
-return'変更完了: '+ev.getTitle()+' / '+fmtDate(ev.getStartTime(),'M月d日(E) HH:mm')+'〜'+fmtDate(ev.getEndTime(),'HH:mm');}
-return'変更完了: '+ev.getTitle()+' / '+fmtDate(ev.getStartTime(),'M月d日(E) HH:mm')+'〜'+fmtDate(ev.getEndTime(),'HH:mm');
+try{ev.setTime(ns,ne);CalendarApp.getDefaultCalendar();Utilities.sleep(500);}catch(se){return'変更に失敗しました。編集権限がない可能性: '+ev.getTitle();}
+changed=true;}
+if(!changed)return'変更内容が指定されていません。新しいタイトル・日時・場所を教えてください。';
+var newStart=ev.getStartTime(),newEnd=ev.getEndTime();
+return'✅ 変更完了！\n📅 '+ev.getTitle()+'\n🕐 '+fmtDate(newStart,'M月d日(E) HH:mm')+'〜'+fmtDate(newEnd,'HH:mm');
 }
 function _setHeader(sheet,headers){if(!headers||!headers.length)return;var r=sheet.getRange(1,1,1,headers.length);r.setValues([headers]);r.setBackground('#1D9E75');r.setFontColor('#FFFFFF');r.setFontWeight('bold');}
 function toolSheetsCreate(input) {
