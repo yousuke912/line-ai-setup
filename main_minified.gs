@@ -10,7 +10,7 @@ var REMOTE_CONFIG_TTL = 21600;
 var SCRIPT_CACHE = CacheService.getScriptCache();
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 2;
-var SYSTEM_PROMPT_CARE_MANAGER = 'あなたは居宅ケアマネジャー専用のAI秘書です。以下のルールに従って動作してください。\n【あなたの役割】在宅で暮らす利用者を支える居宅ケアマネジャーの個人業務をサポートします。\n【得意なこと】\n・担当者会議・モニタリングの議事録を整形・要約する\n・カレンダーへの会議・訪問予定の登録とリマインド設定\n・申し送り・特記事項のメモ保存\n・服薬・処置スケジュールの繰り返しリマインダー\n・退院連携・緊急時のタスクリスト作成\n・ケアプラン関係書類の下書き補助\n・研修資料・プレゼン資料の叩き台作成\n・Google Docsの文字起こしテキストを議事録フォーマットに整形（docs_read→整形→docs_write）\n【Google Docs連携の流れ】\nユーザーがDocsのURLを送ってきたら：1.URLからドキュメントIDを抽出 2.docs_readでfull_read=trueで全文取得 3.内容を整形 4.docs_writeで同じドキュメントに書き戻し（mode=replace）またはdocs_createで新規作成\n【記録の扱い】\n・利用者名が含まれるメッセージは記録として扱う\n・整形後は必ず次のアクション（カレンダー登録・タスク追加・リマインド設定）を提案する\n【返答スタイル】\n・簡潔に、抜け漏れなく\n・介護の専門用語はそのまま使う\n【禁止事項】\n・医療的な診断・判断はしない\n・不明な点は「主治医または専門職にご確認ください」と伝える\n【使用しないツール】以下のツールは呼び出さないでください：hotel_search / drive_folder_create / drive_file_delete / drive_file_move / drive_file_rename / sheets_create / sheets_delete / docs_delete / company';
+var SYSTEM_PROMPT_CARE_MANAGER = 'あなたは居宅ケアマネジャー専用のAI秘書です。以下のルールに従って動作してください。\n【あなたの役割】在宅で暮らす利用者を支える居宅ケアマネジャーの個人業務をサポートします。\n【得意なこと】\n・担当者会議・モニタリングの議事録を整形・要約する\n・カレンダーへの会議・訪問予定の登録とリマインド設定\n・申し送り・特記事項のメモ保存\n・服薬・処置スケジュールの繰り返しリマインダー\n・退院連携・緊急時のタスクリスト作成\n・ケアプラン関係書類の下書き補助\n・研修資料・プレゼン資料の叩き台作成\n・介護説明資料の画像生成（4コマ漫画・インフォグラフィック・説明イラスト）\n・Google Docsの文字起こしテキストを議事録フォーマットに整形（docs_read→整形→docs_write）\n【Google Docs連携の流れ】\nユーザーがDocsのURLを送ってきたら：1.URLからドキュメントIDを抽出 2.docs_readでfull_read=trueで全文取得 3.内容を整形 4.docs_writeで同じドキュメントに書き戻し（mode=replace）またはdocs_createで新規作成\n【記録の扱い】\n・利用者名が含まれるメッセージは記録として扱う\n・整形後は必ず次のアクション（カレンダー登録・タスク追加・リマインド設定）を提案する\n【返答スタイル】\n・簡潔に、抜け漏れなく\n・介護の専門用語はそのまま使う\n【禁止事項】\n・医療的な診断・判断はしない\n・不明な点は「主治医または専門職にご確認ください」と伝える\n【使用しないツール】以下のツールは呼び出さないでください：hotel_search / drive_folder_create / drive_file_delete / drive_file_move / drive_file_rename / sheets_create / sheets_delete / docs_delete / company';
 function selectModel(msg){if(/まとめて|議事録|報告書|ケアプラン|アセスメント|要約|作成して|書いて|研修|資料|整形/.test(msg))return'claude-sonnet-4-5';if(/予定.*(追加|確認|削除|変更)|タスク.*(追加|完了|確認|削除)|メモ.*(保存|確認|追加|削除)|リマインド.*(設定|確認|削除)|今日の予定|天気|経路|ブリーフィング|カレンダー|申し送り.*メモ/.test(msg))return _HAIKU_MODEL;return _HAIKU_MODEL;}
 function selectMaxTokens(msg){if(/まとめて|議事録|報告書|整形/.test(msg))return 1500;if(/ケアプラン|アセスメント|作成して|研修|資料/.test(msg))return 1200;if(/ブリーフィング/.test(msg))return 800;if(/検索|天気|経路|教えて/.test(msg))return 600;if(/予定|タスク|メモ|リマインド|追加|完了|削除/.test(msg))return 300;return 500;}
 var _ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -241,7 +241,7 @@ drive:['drive_folder_create','drive_file_list','drive_file_delete','drive_file_m
 memo:['memo_add','memo_view','memo_delete'],task:['task_add','task_view','task_done','task_undone','task_delete','task_restore'],
 reminder:['reminder_add','reminder_view','reminder_delete','birthday_reminder'],briefing:['briefing_setting'],
 tone:['set_tone'],search:['web_search'],weather:['weather'],route:['route_search','hotel_search'],
-url:['url_summarize'],photo:['drive_file_search'],report:['report_generate'],company:['company'],smart:['smart_search']};}
+url:['url_summarize'],photo:['drive_file_search','image_generate'],report:['report_generate'],company:['company'],smart:['smart_search'],image:['image_generate']};}
 function getToolDefinitions() {
 var s=_S,n=_N,b=_B,e=_E;
 return [
@@ -287,7 +287,8 @@ _T('birthday_reminder','誕生日リマインダー',{name:s('名前'),birthday:
 _T('report_generate','レポート生成',{type:e('種類',['weekly','monthly'])},['type']),
 _T('smart_search','横断検索',{keyword:s('KW'),range_days:n('日数')},['keyword']),
 _T('hotel_search','ホテル検索',{area:s('エリア'),checkin:s('CI date'),checkout:s('CO date'),guests:n('人数'),keyword:s('条件')},['area']),
-_T('company','部署メモ管理',{action:e('操作',['view','status']),dept:s('部署名')},['action'])
+_T('company','部署メモ管理',{action:e('操作',['view','status']),dept:s('部署名')},['action']),
+_T('image_generate','画像生成（介護説明資料・4コマ・インフォグラフィック）',{prompt:s('画像の内容（日本語で詳しく）'),style:e('スタイル',['4コマ漫画','インフォグラフィック','説明イラスト']),title:s('タイトル（省略可）')},['prompt'])
 ];
 }
 function selectTools(message) {
@@ -307,6 +308,7 @@ weather:'天気,気温,雨,晴れ,曇り,予報',
 route:'経路,乗換,バス,電車,ホテル,宿,行き方',
 url:'http,https,url,要約,まとめ',
 photo:'写真,画像,フォト',
+image:'画像,イラスト,4コマ,説明資料,チラシ,図解,インフォ,漫画,生成して',
 report:'レポート,週次,月次',
 tone:'口調,トーン,話し方,可愛,タメ口,ため口,敬語,フレンドリー,ビジネス口調,キャラ,喋り方',
 company:'部署,カンパニー,事業,秘書室,line事業,投稿案,介護ブログ,学校コンサル,hp運用,部門,会社,my-company',
@@ -338,7 +340,7 @@ for (var i = 0; i < list.length; i++) { result[list[i]] = true; }
 }
 return result;
 }
-var _TOOL_MAP={set_tone:toolSetTone,company:toolCompany,gmail_check:toolGmailCheck,gmail_send:toolGmailSend,calendar_view:toolCalView,calendar_add:toolCalAdd,calendar_delete:toolCalDelete,calendar_edit:toolCalEdit,sheets_create:toolSheetsCreate,docs_create:toolDocsCreate,memo_add:toolMemoAdd,memo_view:toolMemoView,memo_delete:toolMemoDelete,reminder_add:toolReminderAdd,reminder_view:toolReminderView,reminder_delete:toolReminderDelete,task_add:toolTaskAdd,task_view:toolTaskView,task_done:toolTaskDone,task_undone:toolTaskUndone,task_delete:toolTaskDelete,task_restore:toolTaskRestore,web_search:toolWebSearch,briefing_setting:toolBriefingSetting,weather:toolWeather,drive_folder_create:function(i,u){if(u!==_KISHI_UID)return'フォルダ作成は現在制限されています';return toolDriveFolderCreate(i);},drive_file_list:toolDriveFileList,drive_file_delete:toolDriveFileDelete,drive_file_move:toolDriveFileMove,drive_file_rename:toolDriveFileRename,drive_file_search:toolDriveFileSearch,route_search:toolRouteSearch,hotel_search:toolHotelSearch,docs_read:toolDocsRead,docs_write:toolDocsWrite,docs_delete:toolDocsDelete,sheets_read:toolSheetsRead,sheets_write:toolSheetsWrite,sheets_delete:toolSheetsDelete,url_summarize:toolUrlSummarize,birthday_reminder:toolBirthdayReminder,report_generate:toolReportGenerate,smart_search:toolSmartSearch};
+var _TOOL_MAP={set_tone:toolSetTone,company:toolCompany,gmail_check:toolGmailCheck,gmail_send:toolGmailSend,calendar_view:toolCalView,calendar_add:toolCalAdd,calendar_delete:toolCalDelete,calendar_edit:toolCalEdit,sheets_create:toolSheetsCreate,docs_create:toolDocsCreate,memo_add:toolMemoAdd,memo_view:toolMemoView,memo_delete:toolMemoDelete,reminder_add:toolReminderAdd,reminder_view:toolReminderView,reminder_delete:toolReminderDelete,task_add:toolTaskAdd,task_view:toolTaskView,task_done:toolTaskDone,task_undone:toolTaskUndone,task_delete:toolTaskDelete,task_restore:toolTaskRestore,web_search:toolWebSearch,briefing_setting:toolBriefingSetting,weather:toolWeather,drive_folder_create:function(i,u){if(u!==_KISHI_UID)return'フォルダ作成は現在制限されています';return toolDriveFolderCreate(i);},drive_file_list:toolDriveFileList,drive_file_delete:toolDriveFileDelete,drive_file_move:toolDriveFileMove,drive_file_rename:toolDriveFileRename,drive_file_search:toolDriveFileSearch,route_search:toolRouteSearch,hotel_search:toolHotelSearch,docs_read:toolDocsRead,docs_write:toolDocsWrite,docs_delete:toolDocsDelete,sheets_read:toolSheetsRead,sheets_write:toolSheetsWrite,sheets_delete:toolSheetsDelete,url_summarize:toolUrlSummarize,birthday_reminder:toolBirthdayReminder,report_generate:toolReportGenerate,smart_search:toolSmartSearch,image_generate:toolImageGenerate};
 function executeTool(name, input, uid) {
 try {
 var fn=_TOOL_MAP[name];
@@ -570,6 +572,23 @@ try{var now=new Date(),evts=_searchCals(new Date(now.getTime()-days*86400000),ne
 try{var rs=getDataSheet('リマインダー');if(rs.getLastRow()>1){var rd=rs.getDataRange().getValues();for(var ri=1;ri<rd.length;ri++)if(rd[ri][4]!=='DELETED'&&String(rd[ri][3]||'').indexOf(kw)!==-1)r.push('🔔リマインダー: '+rd[ri][3]);}}catch(e){}
 if(!r.length)return'「'+kw+'」に関する記録は見つかりませんでした';
 return'🔍「'+kw+'」の検索結果（'+r.length+'件）:\n\n'+r.slice(0,15).join('\n');
+}
+function toolImageGenerate(input,uid){
+var apiKey=_P().getProperty('GEMINI_API_KEY');
+if(!apiKey)return'⚠️ GEMINI_API_KEY が未設定です。管理者にお問い合わせください。';
+var style=input.style||'説明イラスト';
+var fullPrompt='介護・ケアマネジメントの説明資料用イラスト。'+style+'形式。日本語テキスト入り。温かみのあるイラスト調。背景は白またはパステル。内容: '+input.prompt;
+try{
+var res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-004:predict?key='+apiKey,{method:'post',contentType:'application/json',payload:JSON.stringify({instances:[{prompt:fullPrompt}],parameters:{sampleCount:1,aspectRatio:'3:2'}}),muteHttpExceptions:true});
+var data=JSON.parse(res.getContentText());
+if(!data||!data.predictions||!data.predictions[0])return'⚠️ 画像生成に失敗しました: '+(res.getContentText()||'').slice(0,200);
+var b64=data.predictions[0].bytesBase64Encoded;
+var fname=(input.title||'介護説明資料')+'_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd_HHmm')+'.png';
+var blob=Utilities.newBlob(Utilities.base64Decode(b64),'image/png',fname);
+var file=DriveApp.createFile(blob);
+file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+return'🎨 画像を生成しました！\n\n'+(input.title||style)+'\n📎 '+file.getUrl()+'\n\n※ タップして確認してください';
+}catch(e){return'⚠️ 画像生成エラー: '+e.toString();}
 }
 function _listItems(lines,emoji,label,items,max){if(!items.length)return;lines.push(emoji+' '+label+'（'+items.length+'件）');for(var i=0;i<Math.min(items.length,max);i++)lines.push('・'+items[i]);if(items.length>max)lines.push('  ...他'+(items.length-max)+'件');lines.push('');}
 function weeklyReport() {
@@ -1019,12 +1038,12 @@ _lineMsg(_LINE_PUSH_URL,c.LINE_TOKEN,{to:userId,messages:_buildMsgs(text)});
 }
 var _HELP_MAP=(function(){var m={},d='Gmail:📧 Gmail\n\n「メール確認して」→ 未読メールを表示\n「○○さんにメールして」→ 送信\n「返信開始」→ 返信作成モード,カレンダー:📅 カレンダー\n\n「今日の予定」「来週の予定」\n「○月○日に○○を追加」\n「来週の空き時間」→ 30分単位で空きを表示,ドキュメント:📄 ドキュメント\n\n「○○のドキュメント読んで」\n「ドキュメント作成」→ 新規作成\nDocsのURLを送信→ 内容を読み取り,スプレッドシート:📊 スプシ\n\n「○○のスプシ読んで」\n「スプシ作成」→ 新規作成,ドライブ:📁 ドライブ\n\n「○○を検索」→ ファイル・フォルダを横断検索\n「○○さんの書類」→ 利用者名で検索,写真保存:📸 写真保存\n\nLINEに写真を送るだけ！\n→ 自動でGoogleドライブに保存,メモ:📝 メモ\n\n「メモ ○○」→ 保存\n「メモ確認」→ 一覧表示\n「○○のメモ削除」,タスク:✅ タスク\n\n「タスク ○○」→ 追加\n「タスク確認」→ 一覧\n「○○完了」→ 完了にする,レポート:📊 レポート\n\n「週次レポート」「月次レポート」\n→ 期間の活動サマリーを自動生成,リマインダー:⏰ リマインダー\n\n「○時に○○リマインド」\n「毎週月曜に○○」→ 繰り返し設定\n「リマインダー確認」,誕生日リマインダー:🎂 誕生日\n\n「○○さんの誕生日は○月○日」\n→ 毎年自動でお知らせ,朝のスケジュール確認:☀️ 朝の確認\n\n「朝のスケジュール確認ON」\n→ 毎朝、今日の予定+天気をお届け\n停止:「朝のスケジュール確認OFF」,URL要約:🌐 URL要約\n\nURLを送るだけで内容を要約,経路・ホテル:🗺 経路検索\n\n「○○から○○への行き方」\n→ Googleマップのリンクを表示,翻訳:🌍 翻訳・計算\n\n「○○を英語に翻訳」\n「○○を計算して」,文章校正:✏️ 文章校正\n\n「この文章を校正して」\n→ 誤字脱字・表現を修正,AIチャット:💬 AIチャット\n\n何でも質問OK！\n「○○について教えて」\n「○○を調べて」,Web検索:🔍 Web検索\n\n「○○を検索して」\n→ 最新情報をWeb検索,天気:🌤 天気\n\n「今日の天気」「倉敷の天気」\n→ 天気予報を取得,返信作成:✉️ 返信作成\n\n「返信開始」→ 返信作成モードON\n① お客様メッセージ ② 伝えたいこと\n→ 丁寧な返信文を生成\n「返信終了」で通常モードに戻る,口調変更:🗣 口調変更\n\n「口調変更」→ 設定メニュー表示\n丁寧/フレンドリー/ビジネス/カスタム,コスト管理:💰 コスト管理\n\n「残高確認」→ 今月のAPI利用状況を表示'.split(',');
 for(var i=0;i<d.length;i++){var sp=d[i].indexOf(':'),k=d[i].slice(0,sp),v=d[i].slice(sp+1);m[k+'ヘルプ']=v;}
-var care='議事録:📝 議事録の作り方\n\n① PlauDの文字起こしをGoogle Docsに貼付\n② DocsのURLをLINEに送信\n③「議事録にまとめて」と一言添える\n→ 担当者会議録フォーマットに自動整形！\n\nLINEに直接メモを送ってもOK,ケアプラン:📄 ケアプラン下書き\n\n「ケアプランの下書き作って」\n「アセスメントからニーズ整理して」\n「モニタリングまとめて」\n\nDocsのURLを送れば読み取って整形します,研修資料:📑 研修資料作成\n\n「○○について研修資料の叩き台作って」\n「この内容をスライド構成にして」\n\nテーマを伝えるだけでAIが構成・内容を提案,申し送り:📋 申し送り検索\n\n「○○さんのメモ確認」→ 利用者名で検索\n「メモ一覧」→ 最近のメモを表示\n「○○さんの書類」→ Driveから検索,訪問予定:📅 訪問予定管理\n\n「火曜10時に○○さん訪問」→ 即登録\n「来週の空き時間」→ 30分単位で空き表示\n「今日の訪問予定」→ 一覧表示,服薬リマインド:💊 服薬・処置リマインド\n\n「毎週月曜に○○さんの服薬確認」\n「毎月1日にモニタリング」\n→ 繰り返しリマインダーで自動化'.split(',');
+var care='議事録:📝 議事録の作り方\n\n① PlauDの文字起こしをGoogle Docsに貼付\n② DocsのURLをLINEに送信\n③「議事録にまとめて」と一言添える\n→ 担当者会議録フォーマットに自動整形！\n\nLINEに直接メモを送ってもOK,ケアプラン:📄 ケアプラン下書き\n\n「ケアプランの下書き作って」\n「アセスメントからニーズ整理して」\n「モニタリングまとめて」\n\nDocsのURLを送れば読み取って整形します,研修資料:📑 研修資料作成\n\n「○○について研修資料の叩き台作って」\n「この内容をスライド構成にして」\n\nテーマを伝えるだけでAIが構成・内容を提案,申し送り:📋 申し送り検索\n\n「○○さんのメモ確認」→ 利用者名で検索\n「メモ一覧」→ 最近のメモを表示\n「○○さんの書類」→ Driveから検索,訪問予定:📅 訪問予定管理\n\n「火曜10時に○○さん訪問」→ 即登録\n「来週の空き時間」→ 30分単位で空き表示\n「今日の訪問予定」→ 一覧表示,服薬リマインド:💊 服薬・処置リマインド\n\n「毎週月曜に○○さんの服薬確認」\n「毎月1日にモニタリング」\n→ 繰り返しリマインダーで自動化,画像生成:🎨 画像生成\n\n「介護サービスの説明を4コマで作って」\n「認知症ケアのインフォグラフィック作って」\n「退院準備の流れを説明イラストで」\n\nスタイル: 4コマ漫画/インフォグラフィック/説明イラスト\n→ 画像を自動生成してドライブに保存'.split(',');
 for(var j=0;j<care.length;j++){var sp2=care[j].indexOf(':'),k2=care[j].slice(0,sp2),v2=care[j].slice(sp2+1);m[k2+'ヘルプ']=v2;}
 m['ヘルプ']=1;return m;})();
 function getCategoryHelp(message){return _HELP_MAP[message]||null;}
 function helpText(){var jt='general';try{var cs=_getCmsSettings();if(cs&&cs.job_type)jt=cs.job_type;}catch(e){}
-if(jt==='care_manager')return'【いつでも秘書 ケアマネ版】\n\n📝議事録作成 / 📄ケアプラン下書き / 📑研修資料\n📅訪問予定管理 / 🕐空き時間検索\n📋申し送りメモ / ✅タスク管理\n📁ドキュメント / 📁ドライブ / 📸写真保存\n⏰リマインダー / 💊服薬リマインド / ☀️朝の確認\n📧メール / ✉️返信作成 / 🔍Web検索 / 🌤天気\n\n「ヘルプ」でカードメニューを表示';
+if(jt==='care_manager')return'【いつでも秘書 ケアマネ版】\n\n📝議事録作成 / 📄ケアプラン下書き / 📑研修資料\n📅訪問予定管理 / 🕐空き時間検索\n📋申し送りメモ / ✅タスク管理\n📁ドキュメント / 📁ドライブ / 📸写真保存\n⏰リマインダー / 💊服薬リマインド / ☀️朝の確認\n📧メール / ✉️返信作成 / 🔍Web検索 / 🌤天気\n🎨画像生成（4コマ・インフォグラフィック）\n\n「ヘルプ」でカードメニューを表示';
 return'【LINE AI秘書 機能一覧】\n\n📧Gmail / 📅カレンダー / 📄ドキュメント\n📊スプレッドシート / 📁ドライブ / 📸写真保存\n📝メモ / ✅タスク / 📊レポート\n⏰リマインダー / 🎂誕生日 / ☀️朝のスケジュール確認\n🌐URL要約 / 🗺経路 / 🏨ホテル\n🌍翻訳 / ✏️文章校正 / 💬AIチャット\n🔍Web検索 / 🌤天気 / ✉️返信作成\n\n「ヘルプ」でカードメニューを表示';}
 function setupReminderTrigger() {
 var triggers = ScriptApp.getProjectTriggers();
@@ -1032,7 +1051,7 @@ for (var i = 0; i < triggers.length; i++) {if(triggers[i].getHandlerFunction()==
 ScriptApp.newTrigger('checkReminders').timeBased().everyMinutes(5).create();
 }
 var _CAROUSEL_DATA='Googleサービス|Gmail・カレンダー・書類|📧 Gmail|Gmailヘルプ|📅 カレンダー|カレンダーヘルプ|📄 ドキュメント|ドキュメントヘルプ;Googleサービス②|ファイル・シート管理|📊 スプレッドシート|スプレッドシートヘルプ|📁 ドライブ|ドライブヘルプ|📸 写真保存|写真保存ヘルプ;メモ・タスク管理|やることと記録を管理|📝 メモ|メモヘルプ|✅ タスク|タスクヘルプ|📊 レポート作成|レポートヘルプ;リマインダー|通知・スケジュール自動化|⏰ リマインダー|リマインダーヘルプ|🎂 誕生日リマインダー|誕生日リマインダーヘルプ|☀️ 朝のスケジュール確認|朝のスケジュール確認ヘルプ;検索・移動|調べる・探す|🌐 URL要約|URL要約ヘルプ|🗺 経路・乗換|経路・ホテルヘルプ|🏨 ホテル検索|経路・ホテルヘルプ;便利ツール①|翻訳・校正・AIチャット|🌍 翻訳・計算|翻訳ヘルプ|✏️ 文章校正|文章校正ヘルプ|💬 AIチャット|AIチャットヘルプ;便利ツール②|検索・天気・返信作成|🔍 Web検索|Web検索ヘルプ|🌤 天気|天気ヘルプ|✉️ 返信作成モード|返信作成ヘルプ;カスタマイズ|口調・コスト管理|🗣 口調変更|口調変更ヘルプ|💰 コスト確認|コスト管理ヘルプ|❓ その他の使い方|ヘルプ'.split(';').map(function(s){return s.split('|');});
-var _CAROUSEL_DATA_CARE='📝 議事録・書類作成|PlauD文字起こし→整形もOK|📝 議事録作成|議事録ヘルプ|📄 ケアプラン|ケアプランヘルプ|📑 研修資料|研修資料ヘルプ;📅 訪問予定管理|30分単位で空き時間を表示|📅 今日の予定|今日の予定|🕐 空き時間|来週の空き時間|➕ 予定追加|訪問予定ヘルプ;📋 申し送り・メモ|利用者ごとの記録を管理|📝 メモ保存|メモヘルプ|🔍 メモ検索|申し送りヘルプ|✅ タスク管理|タスクヘルプ;📁 Google連携|Docs・ドライブを声で操作|📄 ドキュメント|ドキュメントヘルプ|📁 ファイル検索|ドライブヘルプ|📸 写真保存|写真保存ヘルプ;⏰ リマインダー|服薬・モニタリング時期も|⏰ リマインダー|リマインダーヘルプ|💊 服薬リマインド|服薬リマインドヘルプ|☀️ 朝の確認|朝のスケジュール確認ヘルプ;✉️ メール・返信|Gmail確認・返信をLINEで|📧 メール確認|Gmailヘルプ|✉️ 返信作成|返信作成ヘルプ|🌐 URL要約|URL要約ヘルプ;🔍 調べもの|天気・経路・Web検索|🔍 Web検索|Web検索ヘルプ|🌤 天気|天気ヘルプ|🗺 経路検索|経路・ホテルヘルプ;⚙️ 設定|口調・コスト管理|🗣 口調変更|口調変更ヘルプ|💰 コスト確認|コスト管理ヘルプ|❓ 使い方|ヘルプ'.split(';').map(function(s){return s.split('|');});
+var _CAROUSEL_DATA_CARE='📝 議事録・書類作成|PlauD文字起こし→整形もOK|📝 議事録作成|議事録ヘルプ|📄 ケアプラン|ケアプランヘルプ|📑 研修資料|研修資料ヘルプ;📅 訪問予定管理|30分単位で空き時間を表示|📅 今日の予定|今日の予定|🕐 空き時間|来週の空き時間|➕ 予定追加|訪問予定ヘルプ;📋 申し送り・メモ|利用者ごとの記録を管理|📝 メモ保存|メモヘルプ|🔍 メモ検索|申し送りヘルプ|✅ タスク管理|タスクヘルプ;📁 Google連携|Docs・ドライブを声で操作|📄 ドキュメント|ドキュメントヘルプ|📁 ファイル検索|ドライブヘルプ|📸 写真保存|写真保存ヘルプ;⏰ リマインダー|服薬・モニタリング時期も|⏰ リマインダー|リマインダーヘルプ|💊 服薬リマインド|服薬リマインドヘルプ|☀️ 朝の確認|朝のスケジュール確認ヘルプ;✉️ メール・返信|Gmail確認・返信をLINEで|📧 メール確認|Gmailヘルプ|✉️ 返信作成|返信作成ヘルプ|🌐 URL要約|URL要約ヘルプ;🔍 調べもの|天気・経路・Web検索|🔍 Web検索|Web検索ヘルプ|🌤 天気|天気ヘルプ|🗺 経路検索|経路・ホテルヘルプ;⚙️ 設定・画像|口調・コスト・画像生成|🗣 口調変更|口調変更ヘルプ|💰 コスト確認|コスト管理ヘルプ|🎨 画像生成|画像生成ヘルプ'.split(';').map(function(s){return s.split('|');});
 function getCarouselMessage() {
 var jt='general';try{var cs=_getCmsSettings();if(cs&&cs.job_type)jt=cs.job_type;}catch(e){}
 var data=(jt==='care_manager')?_CAROUSEL_DATA_CARE:_CAROUSEL_DATA;
