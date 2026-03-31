@@ -574,8 +574,10 @@ if(!r.length)return'「'+kw+'」に関する記録は見つかりませんでし
 return'🔍「'+kw+'」の検索結果（'+r.length+'件）:\n\n'+r.slice(0,15).join('\n');
 }
 function toolImageGenerate(input,uid){
-var apiKey=_P().getProperty('GEMINI_API_KEY');
-if(!apiKey)return'⚠️ GEMINI_API_KEY が未設定です。管理者にお問い合わせください。';
+var apiKey=null;
+try{var cs=_getCmsSettings();if(cs&&cs.gemini_api_key)apiKey=cs.gemini_api_key;}catch(e){}
+if(!apiKey)apiKey=_P().getProperty('GEMINI_API_KEY');
+if(!apiKey)return'⚠️ 画像生成にはGemini APIキーが必要です。CMS管理画面のAI設定から設定してください。';
 var style=input.style||'説明イラスト';
 var fullPrompt='介護・ケアマネジメントの説明資料用イラスト。'+style+'形式。日本語テキスト入り。温かみのあるイラスト調。背景は白またはパステル。内容: '+input.prompt;
 try{
