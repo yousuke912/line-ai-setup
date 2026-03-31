@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>いつでも秘書 — 導入手順</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#1565C0;--blue-l:#E3F2FD;--blue-d:#0D47A1;
+  --green:#06C755;--green-d:#04A044;
+  --bg:#F0F4F8;--white:#FFFFFF;--text:#1A1A2E;--sub:#5F6B7C;
+  --bdr:#DDE3EC;--shadow:0 2px 16px rgba(0,0,0,.08);
+  --r:16px;--font:'Noto Sans JP',sans-serif
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.75;min-height:100vh}
+
+/* Header */
+.hd{background:var(--blue-d);padding:14px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hd-logo{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.5px}
+.hd-logo span{color:#90CAF9}
+.hd-pill{background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-left:auto}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--blue-d) 0%,#1976D2 60%,#2196F3 100%);padding:48px 20px 56px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.04)}
+.hero-tag{display:inline-block;background:rgba(255,255,255,.15);color:#fff;font-size:12px;font-weight:700;padding:4px 14px;border-radius:99px;margin-bottom:16px;border:1px solid rgba(255,255,255,.25)}
+.hero h1{font-size:32px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.3}
+.hero h1 em{color:#90CAF9;font-style:normal}
+.hero-sub{font-size:15px;color:rgba(255,255,255,.85);margin-bottom:28px;line-height:1.7}
+.hero-cta{display:inline-block;background:var(--green);color:#fff;font-size:17px;font-weight:700;padding:16px 40px;border-radius:12px;text-decoration:none;box-shadow:0 4px 16px rgba(6,199,85,.4);transition:all .2s}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(6,199,85,.5)}
+.hero-note{margin-top:14px;font-size:12px;color:rgba(255,255,255,.6)}
+
+/* Section */
+.sec{max-width:680px;margin:0 auto;padding:36px 16px}
+.sec-h{font-size:20px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.sec-h::before{content:'';display:inline-block;width:4px;height:22px;background:var(--blue);border-radius:2px}
+.sec-sub{font-size:13px;color:var(--sub);margin-bottom:20px}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--bdr);position:relative}
+.step:last-child{border-bottom:none}
+.step-line{position:absolute;left:19px;top:52px;width:2px;height:calc(100% - 32px);background:var(--blue-l)}
+.step:last-child .step-line{display:none}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1}
+.step-body{flex:1;padding-top:4px}
+.step-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.step-desc{font-size:13px;color:var(--sub);line-height:1.7}
+.step-badge{display:inline-block;background:var(--blue-l);color:var(--blue-d);font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;margin-top:8px}
+
+/* Features grid */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:480px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
+.feat-card{background:var(--white);border-radius:12px;padding:14px 12px;box-shadow:0 1px 6px rgba(0,0,0,.06);border-top:3px solid var(--blue);text-align:center}
+.feat-icon{font-size:24px;margin-bottom:6px}
+.feat-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.feat-desc{font-size:10px;color:var(--sub);line-height:1.5}
+
+/* Plan card */
+.plan{background:var(--white);border-radius:var(--r);padding:24px;box-shadow:var(--shadow);border:2px solid var(--blue);position:relative}
+.plan-rec{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-size:12px;font-weight:700;padding:4px 20px;border-radius:99px;white-space:nowrap}
+.plan-name{font-size:14px;font-weight:700;color:var(--blue-d);margin-bottom:8px}
+.plan-price{font-size:42px;font-weight:900;color:var(--text);line-height:1}
+.plan-price span{font-size:16px;font-weight:400;color:var(--sub)}
+.plan-divider{border:none;border-top:1px solid var(--bdr);margin:16px 0}
+.plan-feat{list-style:none;display:flex;flex-direction:column;gap:8px}
+.plan-feat li{display:flex;align-items:flex-start;gap:8px;font-size:13px}
+.plan-feat li::before{content:'✓';color:var(--green);font-weight:700;margin-top:1px;flex-shrink:0}
+
+/* CTA section */
+.cta-sec{background:linear-gradient(135deg,var(--blue-d),#1976D2);padding:40px 20px;text-align:center}
+.cta-sec h2{font-size:22px;font-weight:900;color:#fff;margin-bottom:8px}
+.cta-sec p{font-size:14px;color:rgba(255,255,255,.8);margin-bottom:24px}
+.cta-btn{display:inline-block;background:var(--green);color:#fff;font-size:17px;font-weight:700;padding:16px 48px;border-radius:12px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:all .2s}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+
+/* Footer */
+footer{background:var(--blue-d);color:rgba(255,255,255,.5);text-align:center;padding:20px;font-size:12px}
+
+/* Divider label */
+.div-label{display:flex;align-items:center;gap:12px;margin:32px 0 20px;font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.08em}
+.div-label::before,.div-label::after{content:'';flex:1;height:1px;background:var(--bdr)}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="hd">
+  <div class="hd-logo">いつでも<span>秘書</span></div>
+  <div class="hd-pill">導入ガイド</div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-tag">📱 LINEで使えるAI秘書</div>
+  <h1>いつでも秘書<br><em>セットアップガイド</em></h1>
+  <p class="hero-sub">LINEに話しかけるだけで、スケジュール・タスク・<br>情報収集をすべてAIがサポートします。</p>
+  <a href="setup-v3.html" class="hero-cta">🚀 セットアップを始める</a>
+  <p class="hero-note">所要時間：約10〜15分</p>
+</section>
+
+<!-- Steps -->
+<div class="sec">
+  <div class="sec-h">導入の流れ</div>
+  <p class="sec-sub">4つのステップで完了します</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">LINEチャンネルを作成する</div>
+        <div class="step-desc">LINE Developersにログインして、Messaging APIチャンネルを作成します。チャンネルアクセストークンをコピーしておいてください。</div>
+        <div class="step-badge">LINE Developers</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Anthropic APIキーを取得する</div>
+        <div class="step-desc">Claude（AI）を動かすためのAPIキーです。console.anthropic.com で取得できます。クレジットカード登録が必要です（約500円〜）。</div>
+        <div class="step-badge">Anthropic Console</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Google Apps Script にコードを設置する</div>
+        <div class="step-desc">自動生成されるコードをGoogle Apps Script（GAS）に貼り付けてデプロイします。Googleアカウントがあれば無料で使えます。</div>
+        <div class="step-badge">Google Apps Script</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">LINEにWebhook URLを設定して完了</div>
+        <div class="step-desc">GASのデプロイURLをLINEのWebhook URLに設定すれば完成。すぐにLINEからAI秘書が使えるようになります。</div>
+        <div class="step-badge">所要時間 約10分</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<div style="background:var(--white);padding:4px 0">
+<div class="sec">
+  <div class="sec-h">主な機能</div>
+  <p class="sec-sub">話しかけるだけで40以上の機能が使えます</p>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📅</div>
+      <div class="feat-name">カレンダー管理</div>
+      <div class="feat-desc">予定の追加・確認・変更</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✅</div>
+      <div class="feat-name">タスク管理</div>
+      <div class="feat-desc">やること一覧・完了管理</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📝</div>
+      <div class="feat-name">メモ保存</div>
+      <div class="feat-desc">すぐ記録・いつでも検索</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-name">リマインダー</div>
+      <div class="feat-desc">毎日・毎週の自動通知</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔍</div>
+      <div class="feat-name">Web検索</div>
+      <div class="feat-desc">最新情報をすぐ収集</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗺️</div>
+      <div class="feat-name">経路検索</div>
+      <div class="feat-desc">乗換・マップをLINEで</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌤️</div>
+      <div class="feat-name">天気予報</div>
+      <div class="feat-desc">今日・明日の天気確認</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📰</div>
+      <div class="feat-name">朝のブリーフィング</div>
+      <div class="feat-desc">予定・天気・ニュースを毎朝配信</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <div class="feat-name">ドキュメント連携</div>
+      <div class="feat-desc">GDocs・Sheetsを操作</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Plan -->
+<div class="sec">
+  <div class="sec-h">料金プラン</div>
+  <p class="sec-sub">シンプルな月額制。いつでも解約できます。</p>
+  <div class="plan">
+    <div class="plan-rec">🌟 スタンダードプラン</div>
+    <div style="margin-top:10px">
+      <div class="plan-name">月額</div>
+      <div class="plan-price">¥5,500<span>（税込）</span></div>
+    </div>
+    <hr class="plan-divider">
+    <ul class="plan-feat">
+      <li>カレンダー・タスク・メモ・リマインダー</li>
+      <li>Web検索・ニュース収集</li>
+      <li>天気予報・経路検索</li>
+      <li>朝のブリーフィング配信</li>
+      <li>Google Docs / Sheets 連携</li>
+      <li>40以上の機能すべて利用可能</li>
+      <li>いつでも解約可能（日割り計算なし）</li>
+    </ul>
+  </div>
+  <p style="font-size:11px;color:var(--sub);margin-top:12px;text-align:center">※ 別途、Anthropic APIの利用料金がかかります（月500〜1,000円程度）</p>
+</div>
+
+<!-- CTA -->
+<section class="cta-sec">
+  <h2>さっそく始めましょう！</h2>
+  <p>所要時間10〜15分。Googleアカウントがあれば<br>今すぐセットアップできます。</p>
+  <a href="setup-v3.html" class="cta-btn">🚀 セットアップを始める</a>
+</section>
+
+<footer>© いつでも秘書</footer>
+
+</body>
+</html>
