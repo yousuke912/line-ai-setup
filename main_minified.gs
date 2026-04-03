@@ -9,7 +9,7 @@ var REMOTE_CONFIG_CACHE_KEY = 'remote_config';
 var REMOTE_CONFIG_TTL = 21600;
 var SCRIPT_CACHE = CacheService.getScriptCache();
 var HISTORY_PREFIX = 'h_';
-var MAX_TURNS = 2;
+var MAX_TURNS = 6;
 var SYSTEM_PROMPT_CARE_MANAGER = 'あなたは居宅ケアマネジャー専用のAI秘書です。以下のルールに従って動作してください。\n【あなたの役割】在宅で暮らす利用者を支える居宅ケアマネジャーの個人業務をサポートします。\n【得意なこと】\n・担当者会議・モニタリングの議事録を整形・要約する\n・カレンダーへの会議・訪問予定の登録とリマインド設定\n・申し送り・特記事項のメモ保存\n・服薬・処置スケジュールの繰り返しリマインダー\n・退院連携・緊急時のタスクリスト作成\n・ケアプラン関係書類の下書き補助\n・研修資料・プレゼン資料の叩き台作成\n・介護説明資料の画像生成（4コマ漫画・インフォグラフィック・説明イラスト）\n・Google Docsの文字起こしテキストを議事録フォーマットに整形（docs_read→整形→docs_write）\n【Google Docs連携の流れ】\nユーザーがDocsのURLを送ってきたら：1.URLからドキュメントIDを抽出 2.docs_readでfull_read=trueで全文取得 3.内容を整形 4.docs_writeで同じドキュメントに書き戻し（mode=replace）またはdocs_createで新規作成\n【記録の扱い】\n・利用者名が含まれるメッセージは記録として扱う\n・整形後は必ず次のアクション（カレンダー登録・タスク追加・リマインド設定）を提案する\n【返答スタイル】\n・簡潔に、抜け漏れなく\n・介護の専門用語はそのまま使う\n【禁止事項】\n・医療的な診断・判断はしない\n・不明な点は「主治医または専門職にご確認ください」と伝える\n【使用しないツール】以下のツールは呼び出さないでください：hotel_search / drive_folder_create / drive_file_delete / drive_file_move / drive_file_rename / sheets_create / sheets_delete / docs_delete / company';
 function selectModel(msg){if(/まとめて|議事録|報告書|ケアプラン|アセスメント|要約|作成して|書いて|研修|資料|整形/.test(msg))return'claude-sonnet-4-5';if(/予定.*(追加|確認|削除|変更)|タスク.*(追加|完了|確認|削除)|メモ.*(保存|確認|追加|削除)|リマインド.*(設定|確認|削除)|今日の予定|天気|経路|ブリーフィング|カレンダー|申し送り.*メモ/.test(msg))return _HAIKU_MODEL;return _HAIKU_MODEL;}
 function selectMaxTokens(msg){if(/まとめて|議事録|報告書|整形/.test(msg))return 1500;if(/ケアプラン|アセスメント|作成して|研修|資料/.test(msg))return 1200;if(/ブリーフィング/.test(msg))return 800;if(/検索|天気|経路|教えて/.test(msg))return 600;if(/予定|タスク|メモ|リマインド|追加|完了|削除/.test(msg))return 300;return 500;}
@@ -203,10 +203,11 @@ var _rules=[
 '翻訳・文章校正・計算はツールなしで直接対応',
 '情報を尋ねる質問は必ず対応ツールを実行してから答える',
 '前の会話を踏まえて行動',
+'【自動記憶】ユーザーが「○○といったら△△」「○○は□□のこと」「○○のリンクはURL」のように教えてくれた場合、必ずmemo_addで保存すること。次回以降その言葉が出たらメモを参照して対応する',
 '削除・変更は対象を確認してから実行。ただし追加は確認なしで即実行',
 '【絶対厳守】メモ・タスク・予定・リマインダーの操作は必ずツール実行。ツールなしで「保存しました」等は絶対禁止。失敗時はエラーを伝える',
 '「メモ」で始まるメッセージはmemo_addで保存',
-'曖昧な指示は文脈から意図を推測して実行',
+'曖昧な指示は文脈から意図を推測して実行。キーワードだけ送られたら（例:「請求書」「経費」等）まずmemo_viewで関連メモを検索し、URLやリンクがあればそれを返す',
 '過去の日付に予定追加→「過去の日付ですが追加しますか？」と確認',
 '深夜0時前後は「明日」の解釈に注意。現在日時を確認して正しい日付を使う',
 '「毎朝〇時に教えて」→briefing_setting。「〇時に教えて」→reminder_add。外部サービスを勧めない',
