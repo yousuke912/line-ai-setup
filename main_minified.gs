@@ -165,14 +165,16 @@ history.push({role:'user',content:toolResults});continue;}
 finalReply='処理できませんでした。もう一度お試しください。';break;}
 if(finalReply==='__SENT__')return null;
 if(!finalReply)finalReply='エラーが発生しました。\n繰り返す場合はAPIクレジット残高をご確認: https://console.anthropic.com → Billing';
-try{var _vR=finalReply,_vT=_usedTools.join(','),_vM=message,_vS=/保存した|メモした|記録した|追加した|登録した|入れた|しといた|完了.*[!！✨]/.test(_vR),_vD=/削除した|消した|取り消した|除した/.test(_vR),_vDn=/完了にした|完了した(?!.*タスク)/.test(_vR),_vF=false;
-if(/^メモ[\s\n]|メモ[にをへ]?(追加|保存|記録|して|しといて)/.test(_vM)&&_vS&&_vT.indexOf('memo_add')===-1)_vF=true;
-if((/タスク[にをへ]?(追加|登録|して|入れて)|^タスク[\s\n]/.test(_vM))&&_vS&&_vT.indexOf('task_add')===-1)_vF=true;
-if(/削除|消して|消す|消去|取り消/.test(_vM)&&_vD&&_vT.indexOf('delete')===-1&&_vT.indexOf('memo_delete')===-1&&_vT.indexOf('task_delete')===-1&&_vT.indexOf('reminder_delete')===-1)_vF=true;
-if((/完了[にを]?[しす]|終わった|できた|やった/.test(_vM))&&_vDn&&_vT.indexOf('task_done')===-1)_vF=true;
-if((/カレンダー[にをへ]?(追加|登録|入れて)|予定[をにへ]?(追加|登録|入れて)/.test(_vM))&&_vS&&_vT.indexOf('calendar_add')===-1)_vF=true;
-if((/リマインダー[にをへ]?(追加|設定|登録|して)|リマインド[をにへ]?(追加|設定|して)/.test(_vM))&&_vS&&_vT.indexOf('reminder_add')===-1)_vF=true;
-if(_vF){finalReply='⚠️ 処理がうまくいかなかったかもしれません。もう一度お試しください🙏';try{var _kC=getConfig();if(_kC.USER_ID===_KISHI_UID)pushToLine(_kC.USER_ID,'⚠️ ハルシネーション検知\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}catch(e2){}}}catch(_vErr){}
+try{var _vR=finalReply,_vT=_usedTools.join(','),_vM=message,_vF=false;
+var _said_save=/保存した|メモした|記録した|追加した|登録した|入れた|しといた|設定した|予定.*登録|カレンダー.*登録|カレンダー.*追加/.test(_vR);
+var _said_del=/削除した|消した|取り消した|除した/.test(_vR);
+var _said_done=/完了にした|完了した(?!.*タスク)/.test(_vR);
+var _said_send=/送信した|メール.*送った|送りました/.test(_vR);
+if(_said_save&&_vT.indexOf('memo_add')===-1&&_vT.indexOf('task_add')===-1&&_vT.indexOf('calendar_add')===-1&&_vT.indexOf('reminder_add')===-1&&_vT.indexOf('gmail_send')===-1&&_vT.indexOf('sheets_write')===-1&&_vT.indexOf('docs_create')===-1&&_vT.indexOf('briefing_setting')===-1)_vF=true;
+if(_said_del&&_vT.indexOf('delete')===-1&&_vT.indexOf('memo_delete')===-1&&_vT.indexOf('task_delete')===-1&&_vT.indexOf('reminder_delete')===-1&&_vT.indexOf('calendar_delete')===-1)_vF=true;
+if(_said_done&&_vT.indexOf('task_done')===-1)_vF=true;
+if(_said_send&&_vT.indexOf('gmail_send')===-1)_vF=true;
+if(_vF){finalReply='⚠️ 処理がうまくいかなかったかもしれません。もう一度お試しください🙏';try{pushToLine(_KISHI_UID,'⚠️ ハルシネーション検知\nUID: '+uid+'\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}catch(e2){}}}catch(_vErr){}
 var cleanHistory=[];
 for(var hi=0;hi<history.length;hi++){var h=history[hi];
 if(h.role==='user'&&Array.isArray(h.content)){var htr=false;for(var hci=0;hci<h.content.length;hci++)if(h.content[hci].type==='tool_result'){htr=true;break;}if(htr)continue;}
@@ -1094,6 +1096,24 @@ function dailyClearCache() {
 CacheService.getScriptCache().remove('remote_code_v1');
 try { dailyBackup(); } catch(e) {}
 try { cleanOldAiLogs(); } catch(e) {}
+try { dailyErrorReport(); } catch(e) {}
+}
+function dailyErrorReport() {
+var cp=_getCmsProps();if(!cp.sbUrl||!cp.sbKey)return;
+var since=new Date(Date.now()-86400000).toISOString();
+var url=cp.sbUrl+'/rest/v1/ai_logs?created_at=gte.'+since+'&select=user_id,user_message,ai_response,tools_used,created_at&order=created_at.desc';
+var res=UrlFetchApp.fetch(url,{headers:_sbHeaders(cp.sbKey),muteHttpExceptions:true});
+var logs=_safeJson(res.getContentText());if(!logs||!logs.length)return;
+var errors=[],hallucinations=[],total=logs.length;
+for(var i=0;i<logs.length;i++){var l=logs[i];
+if(l.ai_response&&/エラー|失敗|できません|申し訳|うまく処理できませんでした/.test(l.ai_response))errors.push(l);
+var tools=l.tools_used||[];
+if(l.ai_response&&/保存した|追加した|登録した|削除した|完了にした|送信した/.test(l.ai_response)&&tools.length===0)hallucinations.push(l);}
+if(errors.length===0&&hallucinations.length===0)return;
+var msg='📊 日次エラーレポート\n総メッセージ: '+total+'件\n';
+if(errors.length>0){msg+='\n🔴 エラー: '+errors.length+'件\n';for(var ei=0;ei<Math.min(errors.length,5);ei++)msg+='・'+errors[ei].user_message.substring(0,50)+'\n';}
+if(hallucinations.length>0){msg+='\n⚠️ ハルシネーション疑い: '+hallucinations.length+'件\n';for(var hi=0;hi<Math.min(hallucinations.length,5);hi++)msg+='・'+hallucinations[hi].user_message.substring(0,50)+' → '+hallucinations[hi].ai_response.substring(0,50)+'\n';}
+pushToLine(_KISHI_UID,msg);
 }
 function cleanOldAiLogs() {
 var cp=_getCmsProps();if(!cp.sbUrl||!cp.sbKey)return;
