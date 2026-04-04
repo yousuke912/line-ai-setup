@@ -412,7 +412,13 @@ else if(rec==='weekly')rule=CalendarApp.newRecurrence().addWeeklyRule();
 else if(rec==='monthly')rule=CalendarApp.newRecurrence().addMonthlyRule();
 else if(rec==='weekdays')rule=CalendarApp.newRecurrence().addWeeklyRule().onlyOnWeekdays([CalendarApp.Weekday.MONDAY,CalendarApp.Weekday.TUESDAY,CalendarApp.Weekday.WEDNESDAY,CalendarApp.Weekday.THURSDAY,CalendarApp.Weekday.FRIDAY]);
 if(rule){ev.deleteEvent();if(input.all_day)ev=cal.createAllDayEventSeries(input.title,s,rule);else ev=cal.createEventSeries(input.title,s,e,rule,{location:loc,description:desc});}}catch(re){}}
-var r='追加完了: '+input.title+' / '+fmtDate(s,'M月d日(E) HH:mm')+(input.end?'〜'+fmtDate(e,'HH:mm'):'')+(input.recurrence?' [繰り返し:'+input.recurrence+']':'');
+Utilities.sleep(500);
+var verified=false;
+try{var vStart=new Date(s.getTime()-60000),vEnd=new Date(e.getTime()+60000),vEvs=cal.getEvents(vStart,vEnd);
+for(var vi=0;vi<vEvs.length;vi++){if(vEvs[vi].getTitle()===input.title){verified=true;break;}}
+if(!verified){Utilities.sleep(1000);vEvs=cal.getEvents(vStart,vEnd);for(var vi2=0;vi2<vEvs.length;vi2++){if(vEvs[vi2].getTitle()===input.title){verified=true;break;}}}}catch(ve){}
+var r=verified?'✅ Googleカレンダーに登録完了: ':'⚠️ 登録を試みました（反映に数秒かかる場合があります）: ';
+r+=input.title+' / '+fmtDate(s,'M月d日(E) HH:mm')+(input.end?'〜'+fmtDate(e,'HH:mm'):'')+(input.recurrence?' [繰り返し:'+input.recurrence+']':'');
 try{if(!input.all_day){var ex=cal.getEvents(s,e),cf=[];for(var ci=0;ci<ex.length;ci++)if(ex[ci].getTitle()!==input.title)cf.push(ex[ci].getTitle()+'('+fmtDate(ex[ci].getStartTime(),'HH:mm')+')');if(cf.length>0)r+='\n⚠️ 同じ時間帯に既存の予定があります: '+cf.join(', ');}}catch(e2){}
 return r;
 }
