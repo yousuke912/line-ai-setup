@@ -142,7 +142,7 @@ if(_ml==='フォローアップoff'){_P().setProperty('FOLLOWUP_'+uid,'FALSE');r
 if(message==='返信開始'){setReplyMode(uid,true);clearHistory(uid);return'✉️ 返信作成モード開始\n①お客様メッセージ②伝えたいこと\n終了:「返信終了」';}
 var history=getHistory(uid),isReplyMode=getReplyMode(uid),tonePrompt=getTonePrompt(uid,props);
 if(tonePrompt&&remoteConfig){remoteConfig=JSON.parse(JSON.stringify(remoteConfig));var sp=remoteConfig.system_prompt||'';remoteConfig.system_prompt=sp.replace(/丁寧で簡潔な日本語/g,'簡潔な日本語').replace(/丁寧・親しみやすい/g,'')+tonePrompt;}
-history.push({role:'user',content:message});var maxLoops=3,finalReply='',_usedTools=[];
+history.push({role:'user',content:message});var maxLoops=5,finalReply='',_usedTools=[];
 for(var loop=0;loop<maxLoops;loop++){
 var response=callClaudeWithTools(config.ANTHROPIC_KEY,history,isReplyMode,remoteConfig);
 if(!response){finalReply='申し訳ありません、処理できませんでした🙏\nもう一度お試しください。';break;}
@@ -174,7 +174,23 @@ if(_said_save&&_vT.indexOf('memo_add')===-1&&_vT.indexOf('task_add')===-1&&_vT.i
 if(_said_del&&_vT.indexOf('delete')===-1&&_vT.indexOf('memo_delete')===-1&&_vT.indexOf('task_delete')===-1&&_vT.indexOf('reminder_delete')===-1&&_vT.indexOf('calendar_delete')===-1)_vF=true;
 if(_said_done&&_vT.indexOf('task_done')===-1)_vF=true;
 if(_said_send&&_vT.indexOf('gmail_send')===-1)_vF=true;
-if(_vF){finalReply='⚠️ 処理がうまくいかなかったかもしれません。もう一度お試しください🙏';try{pushToLine(_KISHI_UID,'⚠️ ハルシネーション検知\nUID: '+uid+'\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}catch(e2){}}}catch(_vErr){}
+if(_vF){try{pushToLine(_KISHI_UID,'⚠️ ハルシネーション検知\nUID: '+uid+'\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}catch(e2){}
+history.push({role:'assistant',content:finalReply});
+history.push({role:'user',content:'【システム】前の回答ではツールが実行されていませんでした。必ず適切なツールを呼び出して実際に処理を実行してください。ユーザーの元のリクエスト: '+_vM});
+finalReply='';_usedTools=[];
+for(var retryLoop=0;retryLoop<2;retryLoop++){
+var retryRes=callClaudeWithTools(config.ANTHROPIC_KEY,history,isReplyMode,remoteConfig);
+if(!retryRes){finalReply='申し訳ありません、処理できませんでした🙏';break;}
+var retryContent=retryRes.content,retryAssist=[];
+for(var ri=0;ri<retryContent.length;ri++){
+if(retryContent[ri].type==='text')finalReply=retryContent[ri].text;
+if(retryContent[ri].type==='tool_use'){var rtc=retryContent[ri],rtr=executeTool(rtc.name,rtc.input,uid);_usedTools.push(rtc.name);
+if(rtr==='__SENT__'){finalReply='__SENT__';break;}
+retryAssist.push(retryContent[ri]);history.push({role:'assistant',content:retryAssist});
+history.push({role:'user',content:[{type:'tool_result',tool_use_id:rtc.id,content:String(rtr)}]});retryAssist=[];continue;}}
+if(finalReply==='__SENT__')break;
+if(retryRes.stop_reason==='end_turn')break;}
+if(!finalReply||finalReply==='')finalReply='⚠️ 処理がうまくいかなかったかもしれません。もう一度お試しください🙏';}}catch(_vErr){}
 var cleanHistory=[];
 for(var hi=0;hi<history.length;hi++){var h=history[hi];
 if(h.role==='user'&&Array.isArray(h.content)){var htr=false;for(var hci=0;hci<h.content.length;hci++)if(h.content[hci].type==='tool_result'){htr=true;break;}if(htr)continue;}
@@ -912,7 +928,7 @@ if(!events.length)lines.push('📅 今日の予定はありません');
 else{lines.push('📅 今日の予定（'+events.length+'件）');for(var i=0;i<Math.min(events.length,5);i++){var ev=events[i],loc=ev.getLocation()?' @'+ev.getLocation():'';lines.push((i+1)+'. '+fmtDate(ev.getStartTime(),'HH:mm')+' '+ev.getTitle()+loc);}if(events.length>5)lines.push(' ...他'+(events.length-5)+'件');}}catch(e){lines.push('📅 カレンダーの取得に失敗しました');}
 lines.push('');
 try{var sh=getDataSheet('タスク');if(sh.getLastRow()>1){var data=sh.getDataRange().getValues(),pend=[];
-for(var ti=1;ti<data.length;ti++)if(data[ti][5]!=='完了'&&data[ti][5]!=='削除済み')pend.push(data[ti]);
+for(var ti=1;ti<data.length;ti++)if(data[ti][5]!=='完了'&&data[ti][5]!=='削除済み'&&String(data[ti][4]).trim())pend.push(data[ti]);
 if(!pend.length)lines.push('✅ 未完了タスクはありません！');
 else{lines.push('✅ 未完了タスク（'+pend.length+'件）');for(var pi=0;pi<Math.min(pend.length,5);pi++)lines.push((pi+1)+'. '+pend[pi][4]+(pend[pi][3]?' ['+pend[pi][3]+']':'')+(pend[pi][2]?' 期限:'+pend[pi][2]:''));if(pend.length>5)lines.push(' ...他'+(pend.length-5)+'件');}}
 else lines.push('✅ タスクはまだありません');}catch(e){lines.push('✅ タスクの取得に失敗しました');}
