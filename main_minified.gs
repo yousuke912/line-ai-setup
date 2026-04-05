@@ -36,7 +36,7 @@ function getDefaultConfig(){return{system_prompt:'あなたは優秀なAI秘書�
 var _TZ='Asia/Tokyo';
 function _F(d,f){return Utilities.formatDate(d instanceof Date?d:new Date(d),_TZ,f);}
 function _parseRawDt(raw){if(typeof raw==='number'&&raw>1e12)return new Date(raw);if(raw instanceof Date)return raw;var s=String(raw||'').trim();if(!s)return null;if(/^\d{13}$/.test(s))return new Date(parseInt(s));if(s.indexOf('+')===-1&&s.indexOf('Z')===-1)s+='+09:00';return new Date(s);}
-function _searchCals(start,end,keyword){var matched=[],seen={},cals=CalendarApp.getAllCalendars();for(var ci=0;ci<cals.length;ci++){var evs=cals[ci].getEvents(start,end);for(var ei=0;ei<evs.length;ei++){var id=evs[ei].getId();if(!seen[id]&&(!keyword||evs[ei].getTitle().indexOf(keyword)!==-1)){seen[id]=true;matched.push(evs[ei]);}}}return matched;}
+function _searchCals(start,end,keyword){var matched=[],seen={},cals=CalendarApp.getAllCalendars();for(var ci=0;ci<cals.length;ci++){var evs=cals[ci].getEvents(start,end);for(var ei=0;ei<evs.length;ei++){var ev=evs[ei],id=ev.getId(),dk=ev.getTitle()+'_'+ev.getStartTime().getTime();if((seen[id]||seen[dk]))continue;if(keyword&&ev.getTitle().indexOf(keyword)===-1)continue;seen[id]=true;seen[dk]=true;matched.push(ev);}}return matched;}
 function _setupTrigger(fn,cfg){var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()===fn)ScriptApp.deleteTrigger(triggers[i]);}return cfg;}
 function _notFound(kw,type){return'「'+kw+'」に該当する'+type+'が見つかりませんでした';}
 function getJSTNow(){return _F(new Date(),'yyyy年M月d日（E） HH:mm');}
