@@ -80,7 +80,11 @@ try{var imgRes=UrlFetchApp.fetch('https://api-data.line.me/v2/bot/message/'+ev.m
 var blob=imgRes.getBlob(),fname='📸 '+_F(new Date(),'yyyy-MM-dd_HH-mm-ss')+'.jpg',file=DriveApp.createFile(blob.setName(fname));
 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);replyToLine(ev.replyToken,'📸 Driveに保存しました！\n'+fname+'\n'+file.getUrl());
 }catch(imgErr){replyToLine(ev.replyToken,'画像の保存に失敗しました: '+imgErr.toString());}continue;}
-if(ev.type!=='message'||ev.message.type!=='text')continue;
+if(ev.type!=='message')continue;
+if(ev.message.type==='audio'||ev.message.type==='video'){replyToLine(ev.replyToken,'音声・動画ファイルには対応していません🙏\nテキストでメッセージを送ってください😊');continue;}
+if(ev.message.type==='file'){replyToLine(ev.replyToken,'ファイルの読み込みには対応していません🙏\n内容をテキストで送っていただければお手伝いします😊');continue;}
+if(ev.message.type==='sticker'){continue;}
+if(ev.message.type!=='text')continue;
 var uid=ev.source.userId,message=ev.message.text.trim();saveUserId(uid);
 var _cs=_getCmsAccountStatus();if(_cs==='suspended'){replyToLine(ev.replyToken,'現在ご利用いただけません。お支払い状況をご確認ください。');continue;}if(_cs==='cancelled'){replyToLine(ev.replyToken,'このアカウントは解約済みです。');continue;}
 if(message==='ヘルプ'||message==='help'){if(!sendCarousel(ev.replyToken))replyToLine(ev.replyToken,helpText());continue;}
