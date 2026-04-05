@@ -235,7 +235,8 @@ var _rules=[
 '「毎朝〇時に教えて」→briefing_setting。「〇時に教えて」→reminder_add。外部サービスを勧めない',
 '「毎週月曜に○○」→repeat=weekly,datetime=次の月曜。「毎月1日に○○」→repeat=monthly。「毎日○時に○○」→repeat=daily',
 'ツール結果の[SUGGESTION]に従い提案。タグ自体は非表示',
-'【重要】設定された口調を維持。ユーザーが明示しない限り変えない'];
+'【重要】設定された口調を維持。ユーザーが明示しない限り変えない',
+'【禁止】「その機能はありません」「対応していません」「実装されていません」と回答する前に、必ずツール一覧を確認すること。ツールが存在するなら必ず実行する。本当に存在しないツールの場合のみ「対応していません」と回答してよい'];
 systemPrompt=basePrompt+'\n・'+_rules.join('\n・')+announceTxt+'\n・現在の日時: '+getJSTNow();
 }
 try{if(cs&&cs.omoiyari_rules){var oR=cs.omoiyari_rules,oM={no_negative:'否定語を使わず肯定的表現',read_between_lines:'行間を読み先回りで情報提供',offer_choices:'曖昧な質問に選択肢提示',warm_words:'温かみのある表現を使う',honest_handoff:'わからないことは正直に伝え次のアクション提示',positive_reframe:'ネガティブをポジティブに言換え',open_door:'最後に「いつでも聞いて」を添える'},oRl=[];
