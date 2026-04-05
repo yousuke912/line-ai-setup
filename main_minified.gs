@@ -79,7 +79,7 @@ var uid2=ev.source.userId;saveUserId(uid2);var cfg2=getConfig();
 try{var imgRes=UrlFetchApp.fetch('https://api-data.line.me/v2/bot/message/'+ev.message.id+'/content',{headers:{Authorization:'Bearer '+cfg2.LINE_TOKEN},muteHttpExceptions:true});
 var blob=imgRes.getBlob(),fname='📸 '+_F(new Date(),'yyyy-MM-dd_HH-mm-ss')+'.jpg',file=DriveApp.createFile(blob.setName(fname));
 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);replyToLine(ev.replyToken,'📸 Driveに保存しました！\n'+fname+'\n'+file.getUrl());
-}catch(imgErr){replyToLine(ev.replyToken,'画像の保存に失敗しました: '+imgErr.toString());}continue;}
+}catch(imgErr){replyToLine(ev.replyToken,'画像の保存に失敗しました🙏 もう一度お試しください');try{pushToLine(_KISHI_UID,'⚠️ 画像保存エラー\nUID:'+uid2+'\n'+imgErr.toString());}catch(e3){}}continue;}
 if(ev.type!=='message')continue;
 if(ev.message.type==='audio'||ev.message.type==='video'){replyToLine(ev.replyToken,'音声・動画ファイルには対応していません🙏\nテキストでメッセージを送ってください😊');continue;}
 if(ev.message.type==='file'){replyToLine(ev.replyToken,'ファイルの読み込みには対応していません🙏\n内容をテキストで送っていただければお手伝いします😊');continue;}
@@ -89,7 +89,7 @@ var uid=ev.source.userId,message=ev.message.text.trim();saveUserId(uid);
 var _cs=_getCmsAccountStatus();if(_cs==='suspended'){replyToLine(ev.replyToken,'現在ご利用いただけません。お支払い状況をご確認ください。');continue;}if(_cs==='cancelled'){replyToLine(ev.replyToken,'このアカウントは解約済みです。');continue;}
 if(message==='ヘルプ'||message==='help'){if(!sendCarousel(ev.replyToken))replyToLine(ev.replyToken,helpText());continue;}
 var reply=processMessage(uid,message);if(reply)replyToLine(ev.replyToken,reply);}
-}catch(err){try{var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID)pushToLine(cfg.USER_ID,'🔴 システムエラー\n'+err.toString()+'\n\n繰り返す場合はhttps://console.anthropic.com のBillingでクレジット残高を確認');}catch(e2){}}
+}catch(err){try{pushToLine(_KISHI_UID,'🔴 システムエラー（doPost）\n'+err.toString());var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID&&cfg.USER_ID!==_KISHI_UID)pushToLine(cfg.USER_ID,'申し訳ありません、一時的にエラーが発生しました🙏\nしばらくしてからもう一度お試しください。');}catch(e2){}}
 return ContentService.createTextOutput('OK');
 }
 function saveUserId(uid){var p=_P();if(!p.getProperty('LINE_USER_ID'))p.setProperty('LINE_USER_ID',uid);}
