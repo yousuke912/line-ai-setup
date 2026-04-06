@@ -233,6 +233,7 @@ var _rules=[
 '過去の日付に予定追加→「過去の日付ですが追加しますか？」と確認',
 '深夜0時前後は「明日」の解釈に注意。現在日時を確認して正しい日付を使う',
 '「毎朝〇時に教えて」→briefing_setting。「〇時に教えて」→reminder_add。外部サービスを勧めない',
+'「試しに出して」「今すぐ送って」→直前の設定内容に応じてweb_searchやweatherを実行。ニュース系ならweb_search、天気ならweatherを使う',
 '「毎週月曜に○○」→repeat=weekly,datetime=次の月曜。「毎月1日に○○」→repeat=monthly。「毎日○時に○○」→repeat=daily',
 'ツール結果の[SUGGESTION]に従い提案。タグ自体は非表示',
 '【重要】設定された口調を維持。ユーザーが明示しない限り変えない',
@@ -349,7 +350,7 @@ break;
 }
 }
 }
-var AI='calendar_view,calendar_add,calendar_delete,calendar_edit,task_add,task_view,task_done,task_undone,task_delete,task_restore,memo_add,memo_view,memo_delete,reminder_add,reminder_view,reminder_delete,briefing_setting,smart_search'.split(','),AIM={};
+var AI='calendar_view,calendar_add,calendar_delete,calendar_edit,task_add,task_view,task_done,task_undone,task_delete,task_restore,memo_add,memo_view,memo_delete,reminder_add,reminder_view,reminder_delete,briefing_setting,smart_search,web_search,weather'.split(','),AIM={};
 for(var ai=0;ai<AI.length;ai++){needed[AI[ai]]=true;AIM[AI[ai]]=1;}
 if(Object.keys(needed).length>0)return all.filter(function(t){return needed[t.name];});
 if(/[？?]|教えて|って何|とは|知りたい/.test(msg))return all.filter(function(t){return needed[t.name]||t.name==='web_search';});
