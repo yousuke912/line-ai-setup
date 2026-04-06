@@ -293,7 +293,7 @@ _T('task_restore','削除済みタスク復元',{keyword:s('KW')},['keyword']),
 _T('set_tone','口調設定。ユーザーが明示的に要望した場合のみ',{tone:s('口調')},['tone']),
 _T('web_search','情報を検索',{query:s('クエリ')},['query']),
 _T('briefing_setting','ブリーフィング設定。news_topicでニュース配信',{action:e('start/stop',['start','stop']),hour:n('時刻'),news_topic:s('ニュースKW。停止はoff')},['action']),
-_T('weather','天気取得。7日先まで対応。服装アドバイス付き',{city:s('都市名（県名や地域名もOK）'),date:s('開始日yyyy-MM-dd'),days:n('日数1-7。デフォルト3')},['city']),
+_T('weather','天気取得。都市ごとに1回ずつ呼ぶこと（複数都市なら複数回）。日付指定時はその日だけ返す',{city:s('都市名1つ（県名や地域名もOK。「四国」等の広域はNG→具体的な都市名で）'),date:s('開始日yyyy-MM-dd'),days:n('日数1-7。date指定時デフォルト1、未指定時デフォルト3')},['city']),
 _T('drive_folder_create','フォルダ作成',{name:s('フォルダ名'),parent:s('親フォルダ名')},['name']),
 _T('drive_file_list','ファイル一覧',{folder:s('フォルダ名'),keyword:s('キーワード')}),
 _T('drive_file_delete','ファイル削除。confirm=false→一覧,true→実行',{keyword:s('KW'),folder:s('フォルダ'),confirm:b('実行')},['keyword']),
@@ -992,18 +992,23 @@ return a.join(' / ');
 }
 function toolWeather(input) {
 var city=input.city||'東京',resolved=_resolveCity(city);
-if(!resolved)return'「'+city+'」の天気情報が見つかりませんでした。都市名や県名で再度お試しください';
-var nm=resolved.name,co=resolved.co,fd=Math.min(Math.max(input.days||3,1),7);
-try{var url='https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days='+fd;
+if(!resolved)return'「'+city+'」の天気情報が見つかりませんでした。具体的な都市名（徳島、高松、神山など）で再度お試しください';
+var nm=resolved.name,co=resolved.co,hasDate=!!input.date,fd=Math.min(Math.max(input.days||(hasDate?1:3),1),7);
+var needDays=hasDate?fd:fd;
+var fetchDays=7;
+try{var url='https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days='+fetchDays;
 var d=JSON.parse(UrlFetchApp.fetch(url,{muteHttpExceptions:true}).getContentText());
 var cr=d.current||{},dy=d.daily||{};if(cr.temperature_2m===undefined)return nm+'の天気情報を取得できませんでした';
 var startIdx=0;
-if(input.date){var sd=input.date;for(var si=0;si<(dy.time||[]).length;si++)if(dy.time[si]===sd){startIdx=si;break;}}
-var r='🌤 '+nm+'の天気\n現在: '+_wc(cr.weathercode)+' '+Math.round(cr.temperature_2m)+'℃ 湿度'+Math.round(cr.relative_humidity_2m||0)+'% 風'+Math.round(cr.windspeed_10m)+'km/h\n\n📅 予報:\n';
-for(var i=startIdx;i<(dy.time||[]).length;i++){
+if(hasDate){var sd=input.date;for(var si=0;si<(dy.time||[]).length;si++)if(dy.time[si]===sd){startIdx=si;break;}}
+var endIdx=Math.min(startIdx+needDays,(dy.time||[]).length);
+var r='🌤 '+nm+'の天気';
+if(!hasDate)r+='\n現在: '+_wc(cr.weathercode)+' '+Math.round(cr.temperature_2m)+'℃ 湿度'+Math.round(cr.relative_humidity_2m||0)+'% 風'+Math.round(cr.windspeed_10m)+'km/h';
+r+='\n';
+for(var i=startIdx;i<endIdx;i++){
 var maxT=Math.round(dy.temperature_2m_max[i]),minT=Math.round(dy.temperature_2m_min[i]),rain=dy.precipitation_sum[i],prob=(dy.precipitation_probability_max||[])[i]||0;
-r+=fmtDate(new Date(dy.time[i]),'M/d(E)')+' '+_wc(dy.weathercode[i])+' '+minT+'〜'+maxT+'℃ ☂'+prob+'%\n';
-r+='  👔 '+_clothingAdvice(maxT,minT,rain)+'\n';}
+r+=fmtDate(new Date(dy.time[i]),'M/d(E)')+' '+_wc(dy.weathercode[i])+' '+minT+'〜'+maxT+'℃ ☂'+prob+'%';
+r+=' 👔'+_clothingAdvice(maxT,minT,rain)+'\n';}
 return r;}catch(e){return nm+'の天気情報を取得できませんでした';}
 }
 function _buildMsgs(text){var p=splitMsg(text),m=[];for(var i=0;i<p.length&&i<5;i++)m.push({type:'text',text:p[i]});return m;}
