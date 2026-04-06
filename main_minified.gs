@@ -1114,9 +1114,11 @@ function helpText(){var jt='general';try{var cs=_getCmsSettings();if(cs&&cs.job_
 if(jt==='care_manager')return'【いつでも秘書 ケアマネ版】\n\n📝議事録作成 / 📄ケアプラン下書き / 📑研修資料\n📅訪問予定管理 / 🕐空き時間検索\n📋申し送りメモ / ✅タスク管理\n📁ドキュメント / 📁ドライブ / 📸写真保存\n⏰リマインダー / 💊服薬リマインド / ☀️朝の確認\n📧メール / ✉️返信作成 / 🔍Web検索 / 🌤天気\n🎨画像生成（4コマ・インフォグラフィック）\n\n「ヘルプ」でカードメニューを表示';
 return'【LINE AI秘書 機能一覧】\n\n📧Gmail / 📅カレンダー / 📄ドキュメント\n📊スプレッドシート / 📁ドライブ / 📸写真保存\n📝メモ / ✅タスク / 📊レポート\n⏰リマインダー / 🎂誕生日 / ☀️朝のスケジュール確認\n🌐URL要約 / 🗺経路 / 🏨ホテル\n🌍翻訳 / ✏️文章校正 / 💬AIチャット\n🔍Web検索 / 🌤天気 / ✉️返信作成\n\n「ヘルプ」でカードメニューを表示';}
 function setupReminderTrigger() {
-var triggers = ScriptApp.getProjectTriggers();
-for (var i = 0; i < triggers.length; i++) {if(triggers[i].getHandlerFunction()==='checkReminders')return;}
+var props=_P(),migrated=props.getProperty('reminder_1min');
+if(migrated==='true'){var has=false;var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()==='checkReminders')has=true;}if(has)return;}
+var triggers2=ScriptApp.getProjectTriggers();for(var j=0;j<triggers2.length;j++){if(triggers2[j].getHandlerFunction()==='checkReminders')ScriptApp.deleteTrigger(triggers2[j]);}
 ScriptApp.newTrigger('checkReminders').timeBased().everyMinutes(1).create();
+props.setProperty('reminder_1min','true');
 }
 var _CAROUSEL_DATA='Googleサービス|Gmail・カレンダー・書類|📧 Gmail|Gmailヘルプ|📅 カレンダー|カレンダーヘルプ|📄 ドキュメント|ドキュメントヘルプ;Googleサービス②|ファイル・シート管理|📊 スプレッドシート|スプレッドシートヘルプ|📁 ドライブ|ドライブヘルプ|📸 写真保存|写真保存ヘルプ;メモ・タスク管理|やることと記録を管理|📝 メモ|メモヘルプ|✅ タスク|タスクヘルプ|📊 レポート作成|レポートヘルプ;リマインダー|通知・スケジュール自動化|⏰ リマインダー|リマインダーヘルプ|🎂 誕生日リマインダー|誕生日リマインダーヘルプ|☀️ 朝のスケジュール確認|朝のスケジュール確認ヘルプ;検索・移動|調べる・探す|🌐 URL要約|URL要約ヘルプ|🗺 経路・乗換|経路・ホテルヘルプ|🏨 ホテル検索|経路・ホテルヘルプ;便利ツール①|翻訳・校正・AIチャット|🌍 翻訳・計算|翻訳ヘルプ|✏️ 文章校正|文章校正ヘルプ|💬 AIチャット|AIチャットヘルプ;便利ツール②|検索・天気・返信作成|🔍 Web検索|Web検索ヘルプ|🌤 天気|天気ヘルプ|✉️ 返信作成モード|返信作成ヘルプ;カスタマイズ|口調・コスト管理|🗣 口調変更|口調変更ヘルプ|💰 コスト確認|コスト管理ヘルプ|❓ その他の使い方|ヘルプ'.split(';').map(function(s){return s.split('|');});
 var _CAROUSEL_DATA_CARE='📝 議事録・書類作成|PlauD文字起こし→整形もOK|📝 議事録作成|議事録ヘルプ|📄 ケアプラン|ケアプランヘルプ|📑 研修資料|研修資料ヘルプ;📅 訪問予定管理|30分単位で空き時間を表示|📅 今日の予定|今日の予定|🕐 空き時間|来週の空き時間|➕ 予定追加|訪問予定ヘルプ;📋 申し送り・メモ|利用者ごとの記録を管理|📝 メモ保存|メモヘルプ|🔍 メモ検索|申し送りヘルプ|✅ タスク管理|タスクヘルプ;📁 Google連携|Docs・ドライブを声で操作|📄 ドキュメント|ドキュメントヘルプ|📁 ファイル検索|ドライブヘルプ|📸 写真保存|写真保存ヘルプ;⏰ リマインダー|服薬・モニタリング時期も|⏰ リマインダー|リマインダーヘルプ|💊 服薬リマインド|服薬リマインドヘルプ|☀️ 朝の確認|朝のスケジュール確認ヘルプ;✉️ メール・返信|Gmail確認・返信をLINEで|📧 メール確認|Gmailヘルプ|✉️ 返信作成|返信作成ヘルプ|🌐 URL要約|URL要約ヘルプ;🔍 調べもの|天気・経路・Web検索|🔍 Web検索|Web検索ヘルプ|🌤 天気|天気ヘルプ|🗺 経路検索|経路・ホテルヘルプ;⚙️ 設定・画像|口調・コスト・画像生成|🗣 口調変更|口調変更ヘルプ|💰 コスト確認|コスト管理ヘルプ|🎨 画像生成|画像生成ヘルプ'.split(';').map(function(s){return s.split('|');});
