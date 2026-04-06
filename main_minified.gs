@@ -292,7 +292,7 @@ _T('task_restore','削除済みタスク復元',{keyword:s('KW')},['keyword']),
 _T('set_tone','口調設定。ユーザーが明示的に要望した場合のみ',{tone:s('口調')},['tone']),
 _T('web_search','情報を検索',{query:s('クエリ')},['query']),
 _T('briefing_setting','ブリーフィング設定。news_topicでニュース配信',{action:e('start/stop',['start','stop']),hour:n('時刻'),news_topic:s('ニュースKW。停止はoff')},['action']),
-_T('weather','天気取得',{city:s('都市名')},['city']),
+_T('weather','天気取得。7日先まで対応。服装アドバイス付き',{city:s('都市名（県名や地域名もOK）'),date:s('開始日yyyy-MM-dd'),days:n('日数1-7。デフォルト3')},['city']),
 _T('drive_folder_create','フォルダ作成',{name:s('フォルダ名'),parent:s('親フォルダ名')},['name']),
 _T('drive_file_list','ファイル一覧',{folder:s('フォルダ名'),keyword:s('キーワード')}),
 _T('drive_file_delete','ファイル削除。confirm=false→一覧,true→実行',{keyword:s('KW'),folder:s('フォルダ'),confirm:b('実行')},['keyword']),
@@ -967,14 +967,42 @@ function setupWeeklyReportTrigger() {
 _setupTrigger('weeklyReport');
 ScriptApp.newTrigger('weeklyReport').timeBased().onWeekDay(ScriptApp.WeekDay.FRIDAY).atHour(17).create();
 }
-var _CC={'東京':[35.68,139.65],'大阪':[34.69,135.50],'名古屋':[35.18,136.91],'福岡':[33.59,130.40],'札幌':[43.06,141.35],'仙台':[38.27,140.87],'広島':[34.39,132.46],'京都':[35.01,135.77],'横浜':[35.44,139.64],'岡山':[34.66,133.93],'神戸':[34.69,135.20],'那覇':[26.21,127.68],'金沢':[36.56,136.66],'熊本':[32.79,130.74]};
+var _CC={'東京':[35.68,139.65],'大阪':[34.69,135.50],'名古屋':[35.18,136.91],'福岡':[33.59,130.40],'札幌':[43.06,141.35],'仙台':[38.27,140.87],'広島':[34.39,132.46],'京都':[35.01,135.77],'横浜':[35.44,139.64],'岡山':[34.66,133.93],'神戸':[34.69,135.20],'那覇':[26.21,127.68],'金沢':[36.56,136.66],'熊本':[32.79,130.74],'徳島':[34.07,134.56],'高松':[34.34,134.05],'香川':[34.34,134.05],'松山':[33.84,132.77],'愛媛':[33.84,132.77],'高知':[33.56,133.53],'新潟':[37.90,139.02],'長野':[36.23,138.18],'静岡':[34.98,138.38],'浜松':[34.71,137.73],'千葉':[35.61,140.12],'さいたま':[35.86,139.65],'埼玉':[35.86,139.65],'川崎':[35.53,139.72],'北九州':[33.88,130.88],'鹿児島':[31.56,130.56],'宮崎':[31.91,131.42],'大分':[33.24,131.61],'長崎':[32.75,129.88],'佐賀':[33.26,130.30],'沖縄':[26.21,127.68],'盛岡':[39.70,141.15],'岩手':[39.70,141.15],'秋田':[39.72,140.10],'山形':[38.24,140.33],'福島':[37.75,140.47],'青森':[40.82,140.74],'水戸':[36.34,140.45],'茨城':[36.34,140.45],'宇都宮':[36.57,139.88],'栃木':[36.57,139.88],'前橋':[36.39,139.06],'群馬':[36.39,139.06],'甲府':[35.66,138.57],'山梨':[35.66,138.57],'富山':[36.70,137.21],'福井':[36.07,136.22],'岐阜':[35.39,136.72],'三重':[34.73,136.51],'津':[34.73,136.51],'滋賀':[35.00,135.87],'大津':[35.00,135.87],'奈良':[34.69,135.83],'和歌山':[34.23,135.17],'鳥取':[35.50,134.24],'島根':[35.47,133.05],'松江':[35.47,133.05],'山口':[34.19,131.47],'旭川':[43.77,142.37],'函館':[41.77,140.73],'帯広':[42.92,143.20],'釧路':[42.98,144.38],'神山':[33.93,134.33],'つくば':[36.08,140.11],'軽井沢':[36.35,138.60],'箱根':[35.23,139.11],'日光':[36.75,139.60],'倉敷':[34.59,133.77],'丸亀':[34.29,133.80]};
+var _CC_ALIAS={'tokyo':'東京','osaka':'大阪','nagoya':'名古屋','fukuoka':'福岡','sapporo':'札幌','sendai':'仙台','hiroshima':'広島','kyoto':'京都','yokohama':'横浜','okayama':'岡山','kobe':'神戸','naha':'那覇','kanazawa':'金沢','kumamoto':'熊本','tokushima':'徳島','takamatsu':'高松','kagawa':'香川','matsuyama':'松山','kochi':'高知','niigata':'新潟','nagano':'長野','shizuoka':'静岡','chiba':'千葉','saitama':'埼玉','kawasaki':'川崎','kitakyushu':'北九州','kagoshima':'鹿児島','miyazaki':'宮崎','oita':'大分','nagasaki':'長崎','saga':'佐賀','okinawa':'沖縄','morioka':'盛岡','akita':'秋田','yamagata':'山形','fukushima':'福島','aomori':'青森','mito':'水戸','utsunomiya':'宇都宮','maebashi':'前橋','kofu':'甲府','toyama':'富山','fukui':'福井','gifu':'岐阜','tsu':'津','otsu':'大津','nara':'奈良','wakayama':'和歌山','tottori':'鳥取','shimane':'島根','matsue':'松江','yamaguchi':'山口','kamiyama':'神山'};
 function _wc(c){if(c===0)return'快晴';if(c<=2)return'晴れ';if(c===3)return'曇り';if(c<=49)return'霧';if(c<=59)return'霧雨';if(c<=69)return'雨';if(c<=79)return'雪';if(c<=82)return'雨';if(c<=86)return'雪';return'雷雨';}
+function _resolveCity(city){
+if(_CC[city])return{name:city,co:_CC[city]};
+var al=_CC_ALIAS[(city||'').toLowerCase()];if(al&&_CC[al])return{name:al,co:_CC[al]};
+var c2=city.replace(/[県府都道市町村区]/g,'');if(_CC[c2])return{name:c2,co:_CC[c2]};
+for(var k in _CC)if(k.indexOf(c2)!==-1||c2.indexOf(k)!==-1)return{name:k,co:_CC[k]};
+return null;
+}
+function _clothingAdvice(maxT,minT,rain){
+var a=[];
+if(maxT>=30)a.push('半袖・薄手の服装');
+else if(maxT>=25)a.push('半袖OK・薄手の羽織りがあると安心');
+else if(maxT>=20)a.push('薄手の長袖+カーディガンorパーカー');
+else if(maxT>=15)a.push('ジャケットやウィンドブレーカー');
+else if(maxT>=10)a.push('コート・厚手のアウター');
+else a.push('ダウン・マフラーなど防寒');
+if(minT<10)a.push('朝晩は冷えるので羽織り必須');
+if(rain>0)a.push('☂折りたたみ傘を持参');
+return a.join(' / ');
+}
 function toolWeather(input) {
-var city=input.city||'東京',co=_CC[city]||_CC['東京'],nm=_CC[city]?city:'東京';
-try{var d=JSON.parse(UrlFetchApp.fetch('https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&current=temperature_2m,weathercode,windspeed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FTokyo&forecast_days=3',{muteHttpExceptions:true}).getContentText());
+var city=input.city||'東京',resolved=_resolveCity(city);
+if(!resolved)return'「'+city+'」の天気情報が見つかりませんでした。都市名や県名で再度お試しください';
+var nm=resolved.name,co=resolved.co,fd=Math.min(Math.max(input.days||3,1),7);
+try{var url='https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days='+fd;
+var d=JSON.parse(UrlFetchApp.fetch(url,{muteHttpExceptions:true}).getContentText());
 var cr=d.current||{},dy=d.daily||{};if(cr.temperature_2m===undefined)return nm+'の天気情報を取得できませんでした';
-var r=nm+'の天気: '+_wc(cr.weathercode)+' '+Math.round(cr.temperature_2m)+'℃ 風'+Math.round(cr.windspeed_10m)+'km/h\n3日間予報:\n';
-for(var i=0;i<3;i++)r+=fmtDate(new Date(dy.time[i]),'M/d(E)')+' '+_wc(dy.weathercode[i])+' '+Math.round(dy.temperature_2m_min[i])+'〜'+Math.round(dy.temperature_2m_max[i])+'℃ 雨'+dy.precipitation_sum[i]+'mm\n';
+var startIdx=0;
+if(input.date){var sd=input.date;for(var si=0;si<(dy.time||[]).length;si++)if(dy.time[si]===sd){startIdx=si;break;}}
+var r='🌤 '+nm+'の天気\n現在: '+_wc(cr.weathercode)+' '+Math.round(cr.temperature_2m)+'℃ 湿度'+Math.round(cr.relative_humidity_2m||0)+'% 風'+Math.round(cr.windspeed_10m)+'km/h\n\n📅 予報:\n';
+for(var i=startIdx;i<(dy.time||[]).length;i++){
+var maxT=Math.round(dy.temperature_2m_max[i]),minT=Math.round(dy.temperature_2m_min[i]),rain=dy.precipitation_sum[i],prob=(dy.precipitation_probability_max||[])[i]||0;
+r+=fmtDate(new Date(dy.time[i]),'M/d(E)')+' '+_wc(dy.weathercode[i])+' '+minT+'〜'+maxT+'℃ ☂'+prob+'%\n';
+r+='  👔 '+_clothingAdvice(maxT,minT,rain)+'\n';}
 return r;}catch(e){return nm+'の天気情報を取得できませんでした';}
 }
 function _buildMsgs(text){var p=splitMsg(text),m=[];for(var i=0;i<p.length&&i<5;i++)m.push({type:'text',text:p[i]});return m;}
