@@ -827,26 +827,29 @@ function genCode(){
 '    }\n'+
 '    Logger.log("関数が見つかりません: " + funcName);\n'+
 '  } catch(e) {\n'+
-'    var errStr = e.toString();\n'+
-'    var cfg = PropertiesService.getScriptProperties();\n'+
-'    var tok = cfg.getProperty("LINE_CHANNEL_ACCESS_TOKEN");\n'+
-'    var uid = cfg.getProperty("LINE_USER_ID");\n'+
-'    var msg;\n'+
-'    if (errStr.indexOf("Unexpected token") !== -1) {\n'+
-'      msg = "APIクレジット残高が不足している可能性があります\\n\\nhttps://console.anthropic.com → Billing\\nで残高をご確認ください";\n'+
-'    } else {\n'+
-'      msg = "エラーが発生しました\\n\\n" + errStr + "\\n\\nAPIクレジット残高もご確認ください\\nhttps://console.anthropic.com → Billing";\n'+
-'    }\n'+
-'    try {\n'+
-'      if (tok && uid) {\n'+
-'        UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {\n'+
-'          method: "post", contentType: "application/json",\n'+
-'          headers: { Authorization: "Bearer " + tok },\n'+
-'          payload: JSON.stringify({ to: uid, messages: [{ type: "text", text: msg }] }),\n'+
-'          muteHttpExceptions: true\n'+
-'        });\n'+
+'    Logger.log("loadAndExec error [" + funcName + "]: " + e.toString());\n'+
+'    if (funcName === "doPost") {\n'+
+'      var errStr = e.toString();\n'+
+'      var cfg = PropertiesService.getScriptProperties();\n'+
+'      var tok = cfg.getProperty("LINE_CHANNEL_ACCESS_TOKEN");\n'+
+'      var uid = cfg.getProperty("LINE_USER_ID");\n'+
+'      var msg;\n'+
+'      if (errStr.indexOf("Unexpected token") !== -1) {\n'+
+'        msg = "申し訳ありません、一時的にエラーが発生しました🙏\\nしばらくしてからもう一度お試しください。";\n'+
+'      } else {\n'+
+'        msg = "申し訳ありません、一時的にエラーが発生しました🙏\\nしばらくしてからもう一度お試しください。";\n'+
 '      }\n'+
-'    } catch(e2) {}\n'+
+'      try {\n'+
+'        if (tok && uid) {\n'+
+'          UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {\n'+
+'            method: "post", contentType: "application/json",\n'+
+'            headers: { Authorization: "Bearer " + tok },\n'+
+'            payload: JSON.stringify({ to: uid, messages: [{ type: "text", text: msg }] }),\n'+
+'            muteHttpExceptions: true\n'+
+'          });\n'+
+'        }\n'+
+'      } catch(e2) {}\n'+
+'    }\n'+
 '  }\n'+
 '  return ContentService.createTextOutput("OK");\n'+
 '}\n'+

@@ -531,6 +531,7 @@ if(ds.indexOf('+')===-1&&ds.indexOf('Z')===-1)ds+='+09:00';
 var ep=new Date(ds).getTime();if(isNaN(ep))ep=new Date(input.datetime).getTime();
 if(isNaN(ep))return'❌ 日時の形式が正しくありません: '+input.datetime+'\n例: 2025-12-25T09:00 または 2025-12-25';
 sheet.appendRow([id,getJSTNow(),ep,input.content,'FALSE',repeat]);
+try{setupReminderTrigger();}catch(e){}
 var fdt=Utilities.formatDate(new Date(ep),'Asia/Tokyo','M月d日(E) HH:mm');
 var rl={'none':'1回のみ','daily':'毎日','weekly':'毎週','monthly':'毎月'};
 return'設定完了: '+input.content+' / '+fdt+'に通知 / '+(rl[repeat]||getMonthlyWeekdayLabel(repeat)||'1回のみ');
@@ -927,6 +928,7 @@ var hour = input.hour !== undefined ? input.hour : 7;
 props.setProperty('BRIEFING_HOUR', String(hour));
 props.setProperty('BRIEFING_ENABLED', 'TRUE');
 setupBriefingTrigger();
+try{setupReminderTrigger();}catch(e){}
 return '☀️ 毎朝' + hour + '時に予定をお届けします！';
 }
 function morningBriefing() {
