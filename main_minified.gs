@@ -89,6 +89,7 @@ var uid=ev.source.userId,message=ev.message.text.trim();saveUserId(uid);
 var _cs=_getCmsAccountStatus();if(_cs==='suspended'){replyToLine(ev.replyToken,'現在ご利用いただけません。お支払い状況をご確認ください。');continue;}if(_cs==='cancelled'){replyToLine(ev.replyToken,'このアカウントは解約済みです。');continue;}
 if(message==='ヘルプ'||message==='help'){if(!sendCarousel(ev.replyToken))replyToLine(ev.replyToken,helpText());continue;}
 var reply=processMessage(uid,message);if(reply)replyToLine(ev.replyToken,reply);}
+try{var _trK='trigger_check_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(!_P().getProperty(_trK)){_P().setProperty(_trK,'1');setupReminderTrigger();setupBriefingTrigger();}}catch(e){}
 }catch(err){try{pushToLine(_KISHI_UID,'🔴 システムエラー（doPost）\n'+err.toString());var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID&&cfg.USER_ID!==_KISHI_UID)pushToLine(cfg.USER_ID,'申し訳ありません、一時的にエラーが発生しました🙏\nしばらくしてからもう一度お試しください。');}catch(e2){}}
 return ContentService.createTextOutput('OK');
 }
