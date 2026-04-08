@@ -178,7 +178,7 @@ if(_said_save&&_vT.indexOf('memo_add')===-1&&_vT.indexOf('task_add')===-1&&_vT.i
 if(_said_del&&_vT.indexOf('delete')===-1&&_vT.indexOf('memo_delete')===-1&&_vT.indexOf('task_delete')===-1&&_vT.indexOf('reminder_delete')===-1&&_vT.indexOf('calendar_delete')===-1)_vF=true;
 if(_said_done&&_vT.indexOf('task_done')===-1)_vF=true;
 if(_said_send&&_vT.indexOf('gmail_send')===-1)_vF=true;
-if(_vF){try{pushToLine(_KISHI_UID,'⚠️ ハルシネーション検知\nUID: '+uid+'\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}catch(e2){}
+if(_vF){try{Logger.log('ハルシネーション検知 UID:'+uid+' msg:'+_vM.substring(0,50)+' tools:'+(_vT||'なし'));if(uid===_KISHI_UID){pushToLine(_KISHI_UID,'⚠️ ハルシネーション検知\nメッセージ: '+_vM.substring(0,100)+'\nAI回答: '+_vR.substring(0,100)+'\n実行ツール: '+(_vT||'なし'));}}catch(e2){}
 history.push({role:'assistant',content:finalReply});
 history.push({role:'user',content:'【システム】前の回答ではツールが実行されていませんでした。必ず適切なツールを呼び出して実際に処理を実行してください。ユーザーの元のリクエスト: '+_vM});
 finalReply='';_usedTools=[];
