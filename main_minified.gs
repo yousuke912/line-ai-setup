@@ -52,8 +52,9 @@ try{SCRIPT_CACHE.put(k,raw,21600);}catch(e){}return JSON.parse(raw);
 function saveHistory(uid, history) {
 if(history.length>MAX_TURNS*2)history=history.slice(-MAX_TURNS*2);
 var k=HISTORY_PREFIX+uid,json=JSON.stringify(history);
+while(json.length>9000&&history.length>2){history=history.slice(2);json=JSON.stringify(history);}
 try{SCRIPT_CACHE.put(k,json,43200);}catch(e){}
-try{_P().setProperty(k,json);}catch(e){}
+try{_P().setProperty(k,json);}catch(e){Logger.log('saveHistory失敗(9KB制限?): '+e);}
 }
 function clearHistory(uid) {
 var k=HISTORY_PREFIX+uid;try{SCRIPT_CACHE.remove(k);}catch(e){}try{_P().deleteProperty(k);}catch(e){}
@@ -238,6 +239,7 @@ var _rules=[
 '「毎朝〇時に教えて」→briefing_setting。「〇時に教えて」→reminder_add。外部サービスを勧めない',
 '「試しに出して」「今すぐ送って」→直前の設定内容に応じてweb_searchやweatherを実行。ニュース系ならweb_search、天気ならweatherを使う',
 '【天気は必ずweatherツール】天気・気温・服装の質問は絶対にweatherツールを使うこと。自分の知識で天気を答えるの禁止。複数都市はweatherを都市ごとに1回ずつ呼ぶ。「四国」「関東」等の広域→具体的な都市名に分解して個別に呼ぶ',
+'【ツールデータ優先】天気・ニュース・検索結果はツールが返したデータのみを使って答えること。推測・補完・自分の知識での回答は禁止',
 '「毎週月曜に○○」→repeat=weekly,datetime=次の月曜。「毎月1日に○○」→repeat=monthly。「毎日○時に○○」→repeat=daily',
 'ツール結果の[SUGGESTION]に従い提案。タグ自体は非表示',
 '【重要】設定された口調を維持。ユーザーが明示しない限り変えない',
@@ -1011,7 +1013,7 @@ var needDays=hasDate?fd:fd;
 var fetchDays=7;
 try{var url='https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days='+fetchDays;
 var d=JSON.parse(UrlFetchApp.fetch(url,{muteHttpExceptions:true}).getContentText());
-var cr=d.current||{},dy=d.daily||{};if(cr.temperature_2m===undefined)return nm+'の天気情報を取得できませんでした';
+var cr=d.current||{},dy=d.daily||{};if(cr.temperature_2m===undefined){Logger.log('天気API取得失敗: '+nm+' res:'+JSON.stringify(d).substring(0,200));return nm+'の天気情報を現在取得できません。しばらくしてからお試しください。';}
 var startIdx=0;
 if(hasDate){var sd=input.date;for(var si=0;si<(dy.time||[]).length;si++)if(dy.time[si]===sd){startIdx=si;break;}}
 var endIdx=Math.min(startIdx+needDays,(dy.time||[]).length);
@@ -1022,7 +1024,8 @@ for(var i=startIdx;i<endIdx;i++){
 var maxT=Math.round(dy.temperature_2m_max[i]),minT=Math.round(dy.temperature_2m_min[i]),rain=dy.precipitation_sum[i],prob=(dy.precipitation_probability_max||[])[i]||0;
 r+=fmtDate(new Date(dy.time[i]),'M/d(E)')+' '+_wc(dy.weathercode[i])+' '+minT+'〜'+maxT+'℃ ☂'+prob+'%';
 r+=' 👔'+_clothingAdvice(maxT,minT,rain)+'\n';}
-return r;}catch(e){return nm+'の天気情報を取得できませんでした';}
+Logger.log('天気取得成功: '+r.substring(0,100));
+return r;}catch(e){Logger.log('天気取得エラー: '+nm+' '+e.toString());return nm+'の天気情報を現在取得できません。しばらくしてからお試しください。';}
 }
 function _buildMsgs(text){var p=splitMsg(text),m=[];for(var i=0;i<p.length&&i<5;i++)m.push({type:'text',text:p[i]});return m;}
 function replyToLine(replyToken, text) {
