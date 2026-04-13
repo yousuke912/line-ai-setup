@@ -92,7 +92,9 @@ if(ev.message.type!=='text')continue;
 var uid=ev.source.userId,message=ev.message.text.trim();saveUserId(uid);
 var _cs=_getCmsAccountStatus();if(_cs==='suspended'){replyToLine(ev.replyToken,'現在ご利用いただけません。お支払い状況をご確認ください。');continue;}if(_cs==='cancelled'){replyToLine(ev.replyToken,'このアカウントは解約済みです。');continue;}
 if(message==='ヘルプ'||message==='help'){if(!sendCarousel(ev.replyToken))replyToLine(ev.replyToken,helpText());continue;}
-var reply=processMessage(uid,message);if(reply)replyToLine(ev.replyToken,reply);}
+var reply=processMessage(uid,message);if(reply)replyToLine(ev.replyToken,reply);
+try{var _cp2=_P();if(!_cp2.getProperty('SELECTED_CALS')&&!_cp2.getProperty('CAL_SETUP_ASKED')){_cp2.setProperty('CAL_SETUP_ASKED','TRUE');if(uid){Utilities.sleep(800);pushToLine(uid,'📅 カレンダー設定のご確認\n\nGoogleカレンダーが複数ある場合、どれをLINE AI秘書に反映するか選べます。\n\n「カレンダー設定」と送ると一覧が表示されます。\n選択しない場合は今まで通り全カレンダーが対象です。');}}}catch(_ce2){}
+}
 try{var _trK='trigger_check_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(!_P().getProperty(_trK)){_P().setProperty(_trK,'1');setupReminderTrigger();setupBriefingTrigger();}}catch(e){}
 }catch(err){try{pushToLine(_KISHI_UID,'🔴 システムエラー（doPost）\n'+err.toString());var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID&&cfg.USER_ID!==_KISHI_UID)pushToLine(cfg.USER_ID,'申し訳ありません、一時的にエラーが発生しました🙏\nしばらくしてからもう一度お試しください。');}catch(e2){}}
 return ContentService.createTextOutput('OK');
@@ -214,8 +216,6 @@ _sbPost(_cp.sbUrl,_cp.sbKey,'ai_logs',{account_id:_cp.clientId,user_id:uid,user_
 if (demoWarning) {
 finalReply = finalReply + demoWarning;
 }
-// カレンダー設定を未確認の購入者に1回だけ確認を促す
-try{var _calProps=_P();if(!_calProps.getProperty('SELECTED_CALS')&&!_calProps.getProperty('CAL_SETUP_ASKED')){_calProps.setProperty('CAL_SETUP_ASKED','TRUE');var _calCfg=getConfig();if(_calCfg.LINE_TOKEN&&_calCfg.USER_ID){Utilities.sleep(500);pushToLine(_calCfg.USER_ID,'📅 カレンダー設定のご確認\n\nLINE AI秘書で使用するGoogleカレンダーを選べます。\n\n「カレンダー設定」と送ると一覧が表示されます。\n選択しない場合は今まで通り全カレンダーが対象になります。');}}}catch(_ce){}
 try { lock.releaseLock(); } catch(le2) {}
 return finalReply;
 }
