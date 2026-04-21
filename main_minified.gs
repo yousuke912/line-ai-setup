@@ -618,6 +618,7 @@ if(od.length>0)pushToLine(config.USER_ID,'⚠️ 期限切れタスク:\n\n'+od.
 try{if(_P().getProperty('FOLLOWUP_'+config.USER_ID)==='TRUE'){var nFU=new Date(),fuEvts=CalendarApp.getDefaultCalendar().getEvents(new Date(nFU.getTime()-7200000),new Date(nFU.getTime()-3600000)),fc=CacheService.getScriptCache();
 for(var fi=0;fi<fuEvts.length;fi++){var fk='fu_'+fuEvts[fi].getId();if(fc.get(fk))continue;var ft=fuEvts[fi].getTitle();if(ft.indexOf('📋')===0)continue;fc.put(fk,'1',86400);pushToLine(config.USER_ID,'📝 「'+ft+'」が終了しました。\n\n議事録やメモを残しますか？\n→「'+ft+'のメモ: ○○」と送るだけでOK！');break;}}}catch(e){}
 try{var bProps=_P();if(bProps.getProperty('BRIEFING_ENABLED')!=='FALSE'){var bNow=new Date(),bH=parseInt(Utilities.formatDate(bNow,'Asia/Tokyo','HH'),10),bM=parseInt(Utilities.formatDate(bNow,'Asia/Tokyo','mm'),10),bTarget=parseInt(bProps.getProperty('BRIEFING_HOUR')||'7',10),bKey='briefing_sent_'+Utilities.formatDate(bNow,'Asia/Tokyo','yyyyMMdd');if(bH===bTarget&&bM<=2&&!bProps.getProperty(bKey)){morningBriefing();}}}catch(e){}
+try{var _calP=_P();if(!_calP.getProperty('SELECTED_CALS')&&!_calP.getProperty('CAL_SETUP_NOTIFIED_V2')){_calP.setProperty('CAL_SETUP_NOTIFIED_V2','TRUE');pushToLine(config.USER_ID,'📅 カレンダー設定のご確認\n\nGoogleカレンダーが複数ある場合、どれをLINE AI秘書に反映するか選べます。\n\n「カレンダー設定」と送ると一覧が表示されます。\n選択しない場合は今まで通り全カレンダーが対象です。');}}catch(e){}
 }
 function toolSmartSearch(input) {
 var kw=input.keyword,days=input.range_days||14,r=[];
