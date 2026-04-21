@@ -867,10 +867,15 @@ function loadAndExec(funcName,arg){
     Logger.log('関数が見つかりません: '+funcName);
   }catch(e){
     Logger.log('実行エラー ['+funcName+']: '+e.toString());
-    try{
-      var cfg=PropertiesService.getScriptProperties(),tok=cfg.getProperty('LINE_CHANNEL_ACCESS_TOKEN'),uid=cfg.getProperty('LINE_USER_ID');
-      if(tok&&uid){UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+tok},payload:JSON.stringify({to:uid,messages:[{type:'text',text:'🔴 エラーが発生しました\\n\\n'+e.toString()+'\\n\\nAPIクレジット残高もご確認ください\\nhttps://console.anthropic.com → Billing'}]}),muteHttpExceptions:true});}
-    }catch(e2){}
+    // doPost以外（checkReminders,morningBriefing等）はLogger.logのみ。タイマー実行エラーで大量通知しない
+    if(funcName==='doPost'){
+      try{
+        var cfg=PropertiesService.getScriptProperties(),tok=cfg.getProperty('LINE_CHANNEL_ACCESS_TOKEN'),uid=cfg.getProperty('LINE_USER_ID');
+        // 1日1回のエラー通知制限（クレジット切れ等で何十回も届くのを防ぐ）
+        var errFlagKey='err_notified_'+new Date().toISOString().slice(0,10);
+        if(tok&&uid&&!cfg.getProperty(errFlagKey)){cfg.setProperty(errFlagKey,'1');UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+tok},payload:JSON.stringify({to:uid,messages:[{type:'text',text:'🔴 エラーが発生しました\\n\\n'+e.toString()+'\\n\\nAPIクレジット残高もご確認ください\\nhttps://console.anthropic.com → Billing'}]}),muteHttpExceptions:true});}
+      }catch(e2){}
+    }
   }
   return ContentService.createTextOutput('OK');
 }
