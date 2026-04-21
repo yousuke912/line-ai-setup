@@ -67,7 +67,7 @@ function getReplyMode(uid){var k=REPLY_MODE_PREFIX+uid,c=SCRIPT_CACHE.get(k);if(
 function setReplyMode(uid,bool){var k=REPLY_MODE_PREFIX+uid,v=bool?'true':'false';try{SCRIPT_CACHE.put(k,v,43200);}catch(e){}_P().setProperty(k,v);}
 function getDataSheet(sheetName) {
 var props=_P(),ssId=props.getProperty('DATA_SS_ID'),ss;
-if(ssId){try{ss=SpreadsheetApp.openById(ssId);}catch(e){try{Utilities.sleep(2000);ss=SpreadsheetApp.openById(ssId);}catch(e2){ss=null;}}}
+if(ssId){try{ss=SpreadsheetApp.openById(ssId);}catch(e){try{Utilities.sleep(2000);ss=SpreadsheetApp.openById(ssId);}catch(e2){var _bkId=props.getProperty('DATA_SS_ID_BACKUP');if(_bkId&&_bkId!==ssId){try{ss=SpreadsheetApp.openById(_bkId);props.setProperty('DATA_SS_ID',_bkId);Logger.log('バックアップIDで復旧: '+_bkId);}catch(e3){ss=null;}}else{ss=null;}}}}
 if(!ss){if(ssId)props.setProperty('DATA_SS_ID_BACKUP',ssId);ss=SpreadsheetApp.create('LINE AI秘書 データ管理');props.setProperty('DATA_SS_ID',ss.getId());try{var c=getConfig();if(c.LINE_TOKEN&&c.USER_ID)pushToLine(c.USER_ID,'⚠️ データシートの接続が切れたため新規作成しました。旧ID: '+(ssId||'なし')+'\n管理者にお問い合わせください。');}catch(e){}}
 var sheet=ss.getSheetByName(sheetName);if(!sheet)sheet=ss.insertSheet(sheetName);return sheet;
 }
@@ -95,7 +95,7 @@ if(message==='ヘルプ'||message==='help'){if(!sendCarousel(ev.replyToken))repl
 var reply=processMessage(uid,message);if(reply)replyToLine(ev.replyToken,reply);
 try{var _cp2=_P();if(!_cp2.getProperty('SELECTED_CALS')&&!_cp2.getProperty('CAL_SETUP_ASKED')){_cp2.setProperty('CAL_SETUP_ASKED','TRUE');if(uid){Utilities.sleep(800);pushToLine(uid,'📅 カレンダー設定のご確認\n\nGoogleカレンダーが複数ある場合、どれをLINE AI秘書に反映するか選べます。\n\n「カレンダー設定」と送ると一覧が表示されます。\n選択しない場合は今まで通り全カレンダーが対象です。');}}}catch(_ce2){}
 }
-try{var _trK='trigger_check_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(!_P().getProperty(_trK)){_P().setProperty(_trK,'1');setupReminderTrigger();setupBriefingTrigger();}}catch(e){}
+try{var _trK='trigger_check_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(!_P().getProperty(_trK)){_P().setProperty(_trK,'1');setupReminderTrigger();if(_P().getProperty('BRIEFING_ENABLED')!=='FALSE')setupBriefingTrigger();}}catch(e){}
 }catch(err){try{pushToLine(_KISHI_UID,'🔴 システムエラー（doPost）\n'+err.toString());var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID&&cfg.USER_ID!==_KISHI_UID)pushToLine(cfg.USER_ID,'申し訳ありません、一時的にエラーが発生しました🙏\nしばらくしてからもう一度お試しください。');}catch(e2){}}
 return ContentService.createTextOutput('OK');
 }
@@ -141,11 +141,11 @@ return '🗑 スキップしました';
 }
 return '⚠️ 見つかりません';
 }
-if(message==='口調変更'||message==='口調設定'){props.setProperty('TONE_MENU_'+uid,'true');return'🗣 口調設定\n1.丁寧 2.フレンドリー 3.ビジネス 4.カスタム\n\n例:「カスタム:関西弁で」\n現在: '+(getTone(uid,props)||'丁寧');}
-var _toneMenu=props.getProperty('TONE_MENU_'+uid);
-if(_toneMenu==='true'&&/^(1|2|3|丁寧|フレンドリー|ビジネス)$/.test(message)){props.deleteProperty('TONE_MENU_'+uid);var tm={'1':'丁寧','2':'フレンドリー','3':'ビジネス'},nt=tm[message]||message;setTone(uid,nt,props);var tl={'丁寧':'丁寧（デフォルト）','フレンドリー':'フレンドリー（タメ口・絵文字多め）','ビジネス':'ビジネス（簡潔・敬語）'};return'✅ 口調を「'+(tl[nt]||nt)+'」に変更しました！\n\n次のメッセージから反映されます。';}
+if(message==='口調変更'||message==='口調設定'){try{SCRIPT_CACHE.put('TONE_MENU_'+uid,'true',300);}catch(e){}props.deleteProperty('TONE_MENU_'+uid);return'🗣 口調設定\n1.丁寧 2.フレンドリー 3.ビジネス 4.カスタム\n\n例:「カスタム:関西弁で」\n現在: '+(getTone(uid,props)||'丁寧');}
+var _toneMenu=SCRIPT_CACHE.get('TONE_MENU_'+uid)||(props.getProperty('TONE_MENU_'+uid)==='true'?'true':null);
+if(_toneMenu==='true'&&/^(1|2|3|丁寧|フレンドリー|ビジネス)$/.test(message)){try{SCRIPT_CACHE.remove('TONE_MENU_'+uid);}catch(e){}props.deleteProperty('TONE_MENU_'+uid);var tm={'1':'丁寧','2':'フレンドリー','3':'ビジネス'},nt=tm[message]||message;setTone(uid,nt,props);var tl={'丁寧':'丁寧（デフォルト）','フレンドリー':'フレンドリー（タメ口・絵文字多め）','ビジネス':'ビジネス（簡潔・敬語）'};return'✅ 口調を「'+(tl[nt]||nt)+'」に変更しました！\n\n次のメッセージから反映されます。';}
 if(message.indexOf('カスタム:')===0||message.indexOf('カスタム：')===0){var ct=message.replace(/^カスタム[：:]/,'').trim();if(ct){setTone(uid,ct,props);return'✅ 口調を「'+ct+'」に設定しました！\n\n次のメッセージから反映されます。';}return'「カスタム:関西弁で」と送信してください';}
-if(_toneMenu==='true'&&message==='4'){props.deleteProperty('TONE_MENU_'+uid);return'「カスタム:関西弁で」のように送信してください';}
+if(_toneMenu==='true'&&message==='4'){try{SCRIPT_CACHE.remove('TONE_MENU_'+uid);}catch(e){}props.deleteProperty('TONE_MENU_'+uid);return'「カスタム:関西弁で」のように送信してください';}
 var _ml=message.toLowerCase();
 if(_ml==='週次まとめon'){_P().setProperty('WEEKLY_REPORT_'+uid,'TRUE');return'✅ 週次まとめを毎週金曜にお届けします！';}
 if(_ml==='週次まとめoff'){_P().setProperty('WEEKLY_REPORT_'+uid,'FALSE');return'🔕 週次まとめの配信を停止しました。再開したい場合は「週次まとめON」と送ってください。';}
