@@ -77,3 +77,11 @@
 ## Case 18: カルーセルのコマンド系ボタン（ヘルプで終わらないtext）が「ヘルプ未定義」と誤検出される
 状況: dailyCheckのヘルプマップ整合性チェックが、カルーセルの全アクションのtextがhelpMapに存在するかを検査。しかし一部ボタン（例: 「📅 カレンダー設定」→ text=「カレンダー設定」）はヘルプ表示ではなく `handleCalendarSetting` を呼ぶコマンド系。helpMapに無いのは正常なのに「🔧 ヘルプ未定義」としてアラートされていた。
 → 対策: `text.indexOf('ヘルプ') === -1` なら continue。「〜ヘルプ」で終わるtextのみ検査対象にする。コマンド系のtextは検査から除外する。
+
+## Case 19: morningBriefingが処理前にフラグを立てるため、内部失敗で当日リカバリ不可
+状況: `briefing_sent_YYYYMMDD` フラグを処理開始直後に立てる設計だった。pushToLine が失敗（LINE Token無効/ネットワーク等）してもフラグは立つため、その日のブリーフィングは送信されないまま終わる。checkRemindersの保険呼び出しも `bH===bTarget && bM<=2` の2分窓のみで、7:00ジャストの発火を逃すと何もしない。
+→ 対策3点:
+  1. **morningBriefing**: `pushToLine` 成功後にフラグを立てるよう変更。送信失敗時はフラグを立てず次のcheckRemindersで再試行可能に
+  2. **checkReminders内のbriefing呼び出し**: 時刻条件を `bH===bTarget&&bM<=2` から `bH>=bTarget&&bH<bTarget+2` に拡大。指定時刻〜2時間後の間で未送信なら送信
+  3. **AI応答ルール**: 「ブリーフィング来なかった」と言われたら再設定を即提案・即実行するルールをsystemPromptに追加。放置厳禁を明記
+  これでトリガー消失/送信失敗/フラグ早立ち、いずれも保険ルートで救済される。
