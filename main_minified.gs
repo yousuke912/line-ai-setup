@@ -39,7 +39,7 @@ function _parseRawDt(raw){if(typeof raw==='number'&&raw>1e12)return new Date(raw
 function _getActiveCals(){var s=_P().getProperty('SELECTED_CALS');if(!s)return CalendarApp.getAllCalendars();if(s==='all')return CalendarApp.getAllCalendars();if(s==='default')return[CalendarApp.getDefaultCalendar()];var ids=s.split(','),res=[],all=CalendarApp.getAllCalendars();for(var i=0;i<all.length;i++)if(ids.indexOf(all[i].getId())!==-1)res.push(all[i]);return res.length>0?res:[CalendarApp.getDefaultCalendar()];}
 function _showCalList(uid,allCals){var cur=_P().getProperty('SELECTED_CALS')||'default',curIds=cur==='default'?[]:cur==='all'?null:cur.split(','),defId=CalendarApp.getDefaultCalendar().getId(),lines=['📅 カレンダー設定\n'],ids=[];for(var i=0;i<allCals.length;i++){var c=allCals[i],cid=c.getId(),on=(cur==='default'?cid===defId:cur==='all'?true:curIds.indexOf(cid)!==-1);lines.push((i+1)+'. '+(on?'✅':'⬜')+' '+c.getName());ids.push(cid);}CacheService.getScriptCache().put('cal_list_'+uid,JSON.stringify(ids),300);lines.push('\n→「カレンダー設定 1 2」で番号を指定して有効化');lines.push('→「カレンダー設定 全て」で全カレンダー');lines.push('→「カレンダー設定 デフォルト」でメインのみに戻す');return lines.join('\n');}
 function handleCalendarSetting(uid,message){var allCals=CalendarApp.getAllCalendars();var trimmed=message.replace(/\s+/g,' ').trim();if(trimmed==='カレンダー設定 全て'){_P().setProperty('SELECTED_CALS','all');return'✅ 全カレンダー（'+allCals.length+'件）を有効にしました';}if(trimmed==='カレンダー設定 デフォルト'){_P().deleteProperty('SELECTED_CALS');return'✅ メインカレンダーのみに戻しました';}var nums=trimmed.replace(/^カレンダー設定\s*/,'').match(/\d+/g);if(nums&&nums.length>0){var cached=CacheService.getScriptCache().get('cal_list_'+uid);if(!cached)return _showCalList(uid,allCals);var calIds=JSON.parse(cached),sel=[];for(var i=0;i<nums.length;i++){var idx=parseInt(nums[i])-1;if(idx>=0&&idx<calIds.length)sel.push(calIds[idx]);}if(!sel.length)return'番号が正しくありません。もう一度「カレンダー設定」と送って一覧を確認してください。';_P().setProperty('SELECTED_CALS',sel.join(','));var names=[];for(var j=0;j<allCals.length;j++)if(sel.indexOf(allCals[j].getId())!==-1)names.push(allCals[j].getName());return'✅ カレンダーを設定しました\n\n'+names.map(function(n){return'・'+n;}).join('\n')+'\n\nブリーフィング・予定確認に反映されます。';}return _showCalList(uid,allCals);}
-function _searchCals(start,end,keyword){var matched=[],seen={},cals=_getActiveCals();for(var ci=0;ci<cals.length;ci++){var evs=cals[ci].getEvents(start,end);for(var ei=0;ei<evs.length;ei++){var ev=evs[ei],id=ev.getId(),dk=ev.getTitle()+'_'+ev.getStartTime().getTime();if((seen[id]||seen[dk]))continue;if(keyword&&ev.getTitle().indexOf(keyword)===-1)continue;seen[id]=true;seen[dk]=true;matched.push(ev);}}return matched;}
+function _searchCals(start,end,keyword){var matched=[],seen={},cals=_getActiveCals();for(var ci=0;ci<cals.length;ci++){try{var evs=cals[ci].getEvents(start,end);for(var ei=0;ei<evs.length;ei++){var ev=evs[ei],id=ev.getId(),dk=ev.getTitle()+'_'+ev.getStartTime().getTime();if((seen[id]||seen[dk]))continue;if(keyword&&ev.getTitle().indexOf(keyword)===-1)continue;seen[id]=true;seen[dk]=true;matched.push(ev);}}catch(e){Logger.log('_searchCals cal failed: '+(cals[ci]&&cals[ci].getName?cals[ci].getName():'?')+' err='+e);}}return matched;}
 function _setupTrigger(fn,cfg){var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()===fn)ScriptApp.deleteTrigger(triggers[i]);}return cfg;}
 function _notFound(kw,type){return'「'+kw+'」に該当する'+type+'が見つかりませんでした';}
 function getJSTNow(){return _F(new Date(),'yyyy年M月d日（E） HH:mm');}
@@ -946,6 +946,13 @@ props.setProperty('BRIEFING_HOUR', String(hour));
 props.setProperty('BRIEFING_ENABLED', 'TRUE');
 setupBriefingTrigger();
 try{setupReminderTrigger();}catch(e){}
+var _trgOK=false;try{var _ts=ScriptApp.getProjectTriggers();for(var _i=0;_i<_ts.length;_i++)if(_ts[_i].getHandlerFunction()==='morningBriefing'){_trgOK=true;break;}}catch(e){}
+var _savedHour=props.getProperty('BRIEFING_HOUR'),_savedEn=props.getProperty('BRIEFING_ENABLED');
+props.setProperty('BRIEFING_LAST_SET_AT', new Date().toISOString());
+if(!_trgOK || _savedHour!==String(hour) || _savedEn!=='TRUE'){
+Logger.log('⚠️ briefing setup verification FAILED: trigger='+_trgOK+' savedHour='+_savedHour+' wantHour='+hour+' enabled='+_savedEn);
+return '⚠️ 朝のスケジュール確認の設定で問題が発生しました。\nお手数ですがもう一度「毎朝'+hour+'時に予定を教えて」と送ってください。';
+}
 return '☀️ 毎朝' + hour + '時に予定をお届けします！';
 }
 function morningBriefing() {
