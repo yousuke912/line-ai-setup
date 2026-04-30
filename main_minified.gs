@@ -1238,7 +1238,7 @@ else if(c.ANTHROPIC_KEY.indexOf('sk-ant-')!==0)iss.push('🔴 APIキー形式不
 if(!c.USER_ID)iss.push('🔴 USER_ID未設定');
 try{var at={};ScriptApp.getProjectTriggers().forEach(function(t){at[t.getHandlerFunction()]=1;});['checkReminders','morningBriefing','dailyClearCache','dailyCheck'].forEach(function(n){if(!at[n])iss.push('🔴 トリガー未登録:'+n);});}catch(e){iss.push('⚠️ トリガー確認失敗');}
 var lu=p.getProperty('LOADER_URL'),ct='';
-if(!lu){iss.push('⚠️ LOADER_URL未設定');}else{try{var sp=lu.indexOf('?')===-1?'?':'&';ct=UrlFetchApp.fetch(lu+sp+'type=code',{muteHttpExceptions:true}).getContentText();if(ct.indexOf('<html')!==-1||ct.indexOf('<!DOCTYPE')!==-1){iss.push('🔴 Config Server異常応答(HTML)');}else{if(ct.length<50000)iss.push('🔴 本体コード破損の疑い('+Math.round(ct.length/1024)+'KB)');var op=(ct.match(/\(/g)||[]).length,cp=(ct.match(/\)/g)||[]).length;if(Math.abs(op-cp)>5)iss.push('🔴 括弧異常(開'+op+'/閉'+cp+')');}}catch(e){iss.push('⚠️ コード取得失敗:'+e.message);}}
+if(!lu){iss.push('⚠️ LOADER_URL未設定');}else{try{var sp=lu.indexOf('?')===-1?'?':'&';ct=UrlFetchApp.fetch(lu+sp+'type=code',{muteHttpExceptions:true}).getContentText();if(ct.trim().charAt(0)==='<'){iss.push('🔴 Config Server異常応答(HTML)');}else{if(ct.length<50000)iss.push('🔴 本体コード破損の疑い('+Math.round(ct.length/1024)+'KB)');var op=(ct.match(/\(/g)||[]).length,cp=(ct.match(/\)/g)||[]).length;if(Math.abs(op-cp)>5)iss.push('🔴 括弧異常(開'+op+'/閉'+cp+')');}}catch(e){iss.push('⚠️ コード取得失敗:'+e.message);}}
 var md=p.getProperty('MANUAL_DOC_ID'),mt='';if(md){try{mt=DocumentApp.openById(md).getBody().getText();}catch(e){}}
 var td=getToolDefinitions(),ac=td.length;
 if(mt){var tm=mt.match(/ツール(\d+)個/);if(tm&&parseInt(tm[1])!==ac)iss.push('🔧 ツール数不一致 コード:'+ac+'個 手順書:'+tm[1]+'個');}
