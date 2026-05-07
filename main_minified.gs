@@ -990,7 +990,7 @@ var briefingText = lines.join('\n');
 try {
 var tone = getTone(config.USER_ID);
 if (tone && tone !== '丁寧' && tone !== '1' && config.ANTHROPIC_KEY) {
-var r=_haikuAsk(config.ANTHROPIC_KEY,'以下のブリーフィングを「'+tone+'」の口調に変換してください。情報は一切変更せず、口調だけ変えてください。日時・件数・タイトル等はそのまま。\n\n'+briefingText,600);
+var r=_haikuAsk(config.ANTHROPIC_KEY,'以下のブリーフィングを「'+tone+'」の口調に変換してください。日時・内容は1文字も変えずそのまま出力。追加の説明や言い換えは禁止。\n\n'+briefingText,600);
 if(r)briefingText=r;
 }
 } catch(e) {}
