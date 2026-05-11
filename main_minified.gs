@@ -247,7 +247,7 @@ var _rules=[
 '「毎朝〇時に教えて」→briefing_setting。「〇時に教えて」→reminder_add。外部サービスを勧めない',
 '「試しに出して」「今すぐ送って」→直前の設定内容に応じてweb_searchやweatherを実行。ニュース系ならweb_search、天気ならweatherを使う',
 '【天気は必ずweatherツール】天気・気温・服装の質問は絶対にweatherツールを使うこと。自分の知識で天気を答えるの禁止。複数都市はweatherを都市ごとに1回ずつ呼ぶ。「四国」「関東」等の広域→具体的な都市名に分解して個別に呼ぶ',
-'【ツールデータ優先】天気・ニュース・検索結果はツールが返したデータのみを使って答えること。推測・補完・自分の知識での回答は禁止',
+'【ツールデータ優先】天気・ニュース・検索結果・予定はツールが返したデータのみを使って答えること。推測・補完・自分の知識での回答は禁止。ユーザーの予定について言及する時は必ずcalendar_viewの結果を使う。ツール結果にない予定を「入ってる」「ある」と言うのは絶対禁止',
 '「毎週月曜に○○」→repeat=weekly,datetime=次の月曜。「毎月1日に○○」→repeat=monthly。「毎日○時に○○」→repeat=daily',
 'ツール結果の[SUGGESTION]に従い提案。タグ自体は非表示',
 '【重要】設定された口調を維持。ユーザーが明示しない限り変えない',
@@ -465,7 +465,7 @@ for(var vi=0;vi<vEvs.length;vi++){if(vEvs[vi].getTitle()===input.title){verified
 if(!verified){Utilities.sleep(1000);vEvs=cal.getEvents(vStart,vEnd);for(var vi2=0;vi2<vEvs.length;vi2++){if(vEvs[vi2].getTitle()===input.title){verified=true;break;}}}}catch(ve){}
 var r=verified?'✅ Googleカレンダーに登録完了: ':'⚠️ 登録を試みました（反映に数秒かかる場合があります）: ';
 r+=input.title+' / '+fmtDate(s,'M月d日(E) HH:mm')+(input.end?'〜'+fmtDate(e,'HH:mm'):'')+(input.recurrence?' [繰り返し:'+input.recurrence+']':'');
-try{if(!input.all_day){var ex=cal.getEvents(s,e),cf=[];for(var ci=0;ci<ex.length;ci++)if(ex[ci].getTitle()!==input.title)cf.push(ex[ci].getTitle()+'('+fmtDate(ex[ci].getStartTime(),'HH:mm')+')');if(cf.length>0)r+='\n⚠️ 同じ時間帯に既存の予定があります: '+cf.join(', ');}}catch(e2){}
+try{if(!input.all_day){var ex=cal.getEvents(s,e),cf=[];for(var ci=0;ci<ex.length;ci++)if(ex[ci].getTitle()!==input.title)cf.push(ex[ci].getTitle()+'('+fmtDate(ex[ci].getStartTime(),'M/d HH:mm')+')');if(cf.length>0)r+='\n⚠️ 同じ時間帯に既存の予定があります: '+cf.join(', ');}}catch(e2){}
 return r;
 }
 function _evList(matched){return matched.map(function(ev,i){return(i+1)+'. '+fmtDate(ev.getStartTime(),'M/d(E) HH:mm')+' '+ev.getTitle();}).join('\n');}
