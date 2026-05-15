@@ -731,11 +731,13 @@ return -1;
 }
 function toolTaskDone(input) {
 var sheet=getDataSheet('タスク');if(sheet.getLastRow()<=1)return'完了するタスクがありません';
-var data=sheet.getDataRange().getValues(),i=_findTaskByKeyword(data,input.keyword,null);
-if(i>0&&data[i][5]!=='完了'&&data[i][5]!=='削除済み'){sheet.getRange(i+1,6).setValue('完了');var r='完了にしました: '+data[i][4];
+var data=sheet.getDataRange().getValues(),kws=String(input.keyword).split(/[,、，\s]+/),completed=[];
+for(var k=0;k<kws.length;k++){var kw=kws[k].trim();if(!kw)continue;
+var i=_findTaskByKeyword(data,kw,null);
+if(i>0&&data[i][5]!=='完了'&&data[i][5]!=='削除済み'){sheet.getRange(i+1,6).setValue('完了');completed.push(data[i][4]);data[i][5]='完了';
 try{var rs=getDataSheet('リマインダー');if(rs.getLastRow()>1){var rd=rs.getDataRange().getValues(),tn=String(data[i][4]);
-for(var ri=1;ri<rd.length;ri++){if(rd[ri][4]==='TRUE'||rd[ri][4]==='DELETED')continue;if(String(rd[ri][3]||'').indexOf(tn)!==-1){rs.getRange(ri+1,5).setValue('DELETED');r+='\n🔕 関連リマインダー自動解除';break;}}}}catch(e){}return r;}
-return _notFound(input.keyword,'未完了タスク');
+for(var ri=1;ri<rd.length;ri++){if(rd[ri][4]==='TRUE'||rd[ri][4]==='DELETED')continue;if(String(rd[ri][3]||'').indexOf(tn)!==-1){rs.getRange(ri+1,5).setValue('DELETED');break;}}}}catch(e){}}}
+if(!completed.length)return _notFound(input.keyword,'未完了タスク');return'完了にしました: '+completed.join(', ');
 }
 function toolTaskDelete(input) {
 var sheet=getDataSheet('タスク');if(sheet.getLastRow()<=1)return'タスクがありません';
