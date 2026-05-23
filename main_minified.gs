@@ -601,10 +601,10 @@ var data=sheet.getRange(1,1,lr,6).getValues(),nowEp=Date.now(),sc=CacheService.g
 for(var i=1;i<data.length;i++){
 if(data[i][4]==='TRUE'||data[i][4]===true||data[i][4]==='DELETED')continue;
 var ra;try{ra=_parseRawDt(data[i][2]);}catch(e){continue;}if(!ra||isNaN(ra.getTime())||ra.getTime()>nowEp)continue;
-var rid=String(data[i][0]),dupKey='rem_sent_'+rid;if(sc.get(dupKey))continue;
+var rid=String(data[i][0]),dupKey='rem_sent_'+rid+'_'+ra.getTime();if(sc.get(dupKey))continue;
 var contentDupKey='rem_c_'+String(data[i][3]||'').replace(/\s+/g,'').slice(0,30)+'_'+Math.floor(ra.getTime()/60000);if(sc.get(contentDupKey))continue;
-sc.put(dupKey,'1',300);sc.put(contentDupKey,'1',300);
-sheet.getRange(i+1,5).setValue('TRUE');
+sc.put(dupKey,'1',86400);sc.put(contentDupKey,'1',86400);
+sheet.getRange(i+1,5).setValue('TRUE');SpreadsheetApp.flush();
 var msg='⏰ リマインダー\n'+Utilities.formatDate(ra,'Asia/Tokyo','M月d日(E) HH:mm')+'\n\n'+data[i][3];
 try{var rt=getTone(config.USER_ID);if(rt&&rt!=='丁寧'&&rt!=='1'&&config.ANTHROPIC_KEY){var r=_haikuAsk(config.ANTHROPIC_KEY,'リマインダー通知を「'+rt+'」の口調に変換。日時・内容は1文字も変えずそのまま出力。追加の説明や言い換えは禁止。\n\n'+msg,200);if(r)msg=r;}}catch(e){}
 pushToLine(config.USER_ID,msg);
@@ -613,7 +613,7 @@ if(rep!=='none'){var nd=new Date(ra);
 if(rep==='daily')nd.setDate(nd.getDate()+1);if(rep==='weekly')nd.setDate(nd.getDate()+7);if(rep==='monthly')nd.setMonth(nd.getMonth()+1);
 if(rep==='yearly'){var js=Utilities.formatDate(ra,'Asia/Tokyo',"yyyy-MM-dd'T'HH:mm:ss'+09:00'");nd=new Date((parseInt(js.slice(0,4),10)+1)+js.slice(4));}
 if(rep.indexOf('monthly_weekday_')===0){var pts=rep.split('_');nd=getNextMonthlyWeekday(ra,parseInt(pts[2]),parseInt(pts[3]));}
-sheet.getRange(i+1,3).setValue(nd.getTime());sheet.getRange(i+1,5).setValue('FALSE');}}
+sheet.getRange(i+1,3).setValue(nd.getTime());sheet.getRange(i+1,5).setValue('FALSE');SpreadsheetApp.flush();}}
 try{var nh=parseInt(_F(new Date(),'HH'),10);if(nh===9){var props=_P(),tk='overdue_checked_'+_F(new Date(),'yyyyMMdd');if(!props.getProperty(tk)){props.setProperty(tk,'true');
 var ts=getDataSheet('タスク');if(ts.getLastRow()>1){var td=ts.getDataRange().getValues(),tds=_F(new Date(),'yyyy-MM-dd'),od=[];
 for(var oi=1;oi<td.length;oi++){if(td[oi][5]==='完了'||td[oi][5]==='削除済み')continue;var dv=String(td[oi][2]||'').trim();if(!dv)continue;var dd=dv.length>=10?dv.substring(0,10):dv;if(dd<tds)od.push(td[oi][4]+'（期限: '+dd+'）');}
