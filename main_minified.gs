@@ -546,6 +546,7 @@ var ds=input.datetime;if(/^\d{4}-\d{2}-\d{2}$/.test(ds))ds+='T00:00:00';
 if(ds.indexOf('+')===-1&&ds.indexOf('Z')===-1)ds+='+09:00';
 var ep=new Date(ds).getTime();if(isNaN(ep))ep=new Date(input.datetime).getTime();
 if(isNaN(ep))return'❌ 日時の形式が正しくありません: '+input.datetime+'\n例: 2025-12-25T09:00 または 2025-12-25';
+if(repeat.indexOf('monthly_weekday_')===0){var mwP=repeat.split('_'),mwN=parseInt(mwP[2]),mwW=parseInt(mwP[3]),oMs=ep,fDt=getMonthlyWeekday(new Date(ep),mwN,mwW);if(fDt.getTime()<Date.now())fDt=getNextMonthlyWeekday(fDt,mwN,mwW);if(fDt.getTime()!==oMs){Logger.log('初回datetime補正: '+new Date(oMs).toString()+' → '+fDt.toString());ep=fDt.getTime();}}
 sheet.appendRow([id,getJSTNow(),ep,input.content,'FALSE',repeat]);
 try{setupReminderTrigger();}catch(e){}
 var fdt=Utilities.formatDate(new Date(ep),'Asia/Tokyo','M月d日(E) HH:mm');
@@ -560,6 +561,13 @@ var weekday = parseInt(parts[3]);
 var nthStr = ['', '第1', '第2', '第3', '第4', '第5'][nth] || '第' + nth;
 var dayStr = ['日', '月', '火', '水', '木', '金', '土'][weekday];
 return '毎月' + nthStr + dayStr + '曜日';
+}
+function getMonthlyWeekday(baseDate, nth, weekday) {
+var d=new Date(baseDate);d.setDate(1);
+var firstDow=d.getDay(),diff=(weekday-firstDow+7)%7,targetDate=1+diff+(nth-1)*7;
+d.setDate(targetDate);
+var timePart=Utilities.formatDate(baseDate,'Asia/Tokyo','HH:mm:ss'),datePart=Utilities.formatDate(d,'Asia/Tokyo','yyyy-MM-dd');
+return new Date(datePart+'T'+timePart+'+09:00');
 }
 function getNextMonthlyWeekday(baseDate, nth, weekday) {
 var next = new Date(baseDate);
@@ -600,6 +608,8 @@ var sheet=getDataSheet('リマインダー'),lr=sheet.getLastRow();if(lr<=1)retu
 var data=sheet.getRange(1,1,lr,6).getValues(),nowEp=Date.now(),sc=CacheService.getScriptCache();
 for(var i=1;i<data.length;i++){
 if(data[i][4]==='TRUE'||data[i][4]===true||data[i][4]==='DELETED')continue;
+var rpC=String(data[i][5]||'none');
+if(rpC.indexOf('monthly_weekday_')===0){try{var raC=_parseRawDt(data[i][2]);if(raC&&!isNaN(raC.getTime())){var ptC=rpC.split('_'),nC=parseInt(ptC[2]),wC=parseInt(ptC[3]);if(raC.getDay()!==wC){var fC=getMonthlyWeekday(raC,nC,wC);if(fC.getTime()<Date.now())fC=getNextMonthlyWeekday(fC,nC,wC);sheet.getRange(i+1,3).setValue(fC.getTime());SpreadsheetApp.flush();Logger.log('リマインダー日付自動補正: '+data[i][3]+' / '+raC.toString()+' → '+fC.toString());continue;}}}catch(eC){Logger.log('日付補正エラー:'+eC);}}
 var ra;try{ra=_parseRawDt(data[i][2]);}catch(e){continue;}if(!ra||isNaN(ra.getTime())||ra.getTime()>nowEp)continue;
 var rid=String(data[i][0]),dupKey='rem_sent_'+rid+'_'+ra.getTime();if(sc.get(dupKey))continue;
 var contentDupKey='rem_c_'+String(data[i][3]||'').replace(/\s+/g,'').slice(0,30)+'_'+Math.floor(ra.getTime()/60000);if(sc.get(contentDupKey))continue;

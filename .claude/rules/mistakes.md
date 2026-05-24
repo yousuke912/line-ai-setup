@@ -86,6 +86,15 @@
   3. **AI応答ルール**: 「ブリーフィング来なかった」と言われたら再設定を即提案・即実行するルールをsystemPromptに追加。放置厳禁を明記
   これでトリガー消失/送信失敗/フラグ早立ち、いずれも保険ルートで救済される。
 
+## Case 21: monthly_weekday リマインダーの日付がズレる（AI解釈ミス＋無補正）
+状況: 「毎月第2金曜日と第4金曜日の朝9:00に朱々さん配信人数設定」とユーザー指示。AIが `briefing_setting` ではなく `reminder_add(repeat=monthly_weekday, nth_week=4, weekday=5)` で登録したが、初回datetimeを **5/23(土) 09:00** に誤設定。コード側は datetime をそのまま採用するだけで「第N週Weekday」と一致するか検証してなかった。結果、土曜日に発火し、繰り返しの次回計算も「土曜日基準」になり、毎月誤った曜日にリマインドが来る。さらに getNextMonthlyWeekday には `next.setDate(targetDate)` が抜けてるバグもあった（master側）。
+→ 対策3点:
+  1. **getNextMonthlyWeekday の setDate(targetDate) 抜けバグ修正**: master側のみのバグ
+  2. **getMonthlyWeekday 関数を新規追加**: 当月の第N週Weekdayを返す。toolReminderAdd 初回datetime補正と checkReminders 自動補正で使用
+  3. **toolReminderAdd で初回datetime補正**: `repeat='monthly_weekday'` の場合、初回datetime を強制的に第N週Weekdayに合わせる。過去なら翌月に
+  4. **checkReminders で既存リマインダー自動補正**: 既に間違って登録されたリマインダーも、checkReminders 実行時に曜日が一致してなければ自動修正→今回はスキップ→次回正しい時刻で発火
+  これで購入者にリマインダー削除→再登録の手間を取らせず、コード側で自動修復される（Case 15遵守）。
+
 ## Case 20: リマインダーが5分毎に重複送信される（Case 7再発）
 状況: にんじん秘書（購入者）で9:00, 9:05, 9:10と同じリマインダーが3連発で送信された。コードは「09:00」の同じリマインダーIDを3回処理してる。Case 7対策（CacheService TTL=300秒, sheet setValue('TRUE')）は入っていたが、TTLがcheckRemindersのトリガー間隔（5分）と同じため、次回実行時にキャッシュが切れていて重複検知できない。SpreadsheetApp.flush()も無いため、setValue('TRUE')の反映が遅延した可能性。
 → 対策3点:
