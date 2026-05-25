@@ -611,10 +611,13 @@ if(data[i][4]==='TRUE'||data[i][4]===true||data[i][4]==='DELETED')continue;
 var rpC=String(data[i][5]||'none');
 if(rpC.indexOf('monthly_weekday_')===0){try{var raC=_parseRawDt(data[i][2]);if(raC&&!isNaN(raC.getTime())){var ptC=rpC.split('_'),nC=parseInt(ptC[2]),wC=parseInt(ptC[3]);if(raC.getDay()!==wC){var fC=getMonthlyWeekday(raC,nC,wC);if(fC.getTime()<Date.now())fC=getNextMonthlyWeekday(fC,nC,wC);sheet.getRange(i+1,3).setValue(fC.getTime());SpreadsheetApp.flush();Logger.log('リマインダー日付自動補正: '+data[i][3]+' / '+raC.toString()+' → '+fC.toString());continue;}}}catch(eC){Logger.log('日付補正エラー:'+eC);}}
 var ra;try{ra=_parseRawDt(data[i][2]);}catch(e){continue;}if(!ra||isNaN(ra.getTime())||ra.getTime()>nowEp)continue;
+var freshStatus=sheet.getRange(i+1,5).getValue();
+if(freshStatus==='TRUE'||freshStatus===true){Logger.log('リマインダー送信スキップ(最新getValueがTRUE): '+data[i][3]);continue;}
 var rid=String(data[i][0]),dupKey='rem_sent_'+rid+'_'+ra.getTime();if(sc.get(dupKey))continue;
 var contentDupKey='rem_c_'+String(data[i][3]||'').replace(/\s+/g,'').slice(0,30)+'_'+Math.floor(ra.getTime()/60000);if(sc.get(contentDupKey))continue;
-sc.put(dupKey,'1',86400);sc.put(contentDupKey,'1',86400);
-sheet.getRange(i+1,5).setValue('TRUE');SpreadsheetApp.flush();
+sc.put(dupKey,'1',21600);sc.put(contentDupKey,'1',21600);
+var writeOk=false;for(var rt2=0;rt2<3;rt2++){try{sheet.getRange(i+1,5).setValue('TRUE');SpreadsheetApp.flush();Utilities.sleep(200);var vfy=sheet.getRange(i+1,5).getValue();if(vfy==='TRUE'||vfy===true){writeOk=true;break;}}catch(eW){Logger.log('sheet書き込み失敗 retry='+rt2+': '+eW);}Utilities.sleep(500);}
+if(!writeOk){Logger.log('リマインダー送信スキップ(sheet書き込み失敗): '+data[i][3]);continue;}
 var msg='⏰ リマインダー\n'+Utilities.formatDate(ra,'Asia/Tokyo','M月d日(E) HH:mm')+'\n\n'+data[i][3];
 try{var rt=getTone(config.USER_ID);if(rt&&rt!=='丁寧'&&rt!=='1'&&config.ANTHROPIC_KEY){var r=_haikuAsk(config.ANTHROPIC_KEY,'リマインダー通知を「'+rt+'」の口調に変換。日時・内容は1文字も変えずそのまま出力。追加の説明や言い換えは禁止。\n\n'+msg,200);if(r)msg=r;}}catch(e){}
 pushToLine(config.USER_ID,msg);
