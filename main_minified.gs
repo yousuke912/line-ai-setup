@@ -174,7 +174,9 @@ var _trLim=(tn==='docs_read')?4500:1500;
 toolResults.push({type:'tool_result',tool_use_id:content[ti].id,content:typeof tr==='string'&&tr.length>_trLim?tr.slice(0,_trLim)+'…（省略）':tr});}
 if(_alreadySent){finalReply='__SENT__';break;}
 history.push({role:'user',content:toolResults});continue;}
-finalReply='処理できませんでした。もう一度お試しください。';break;}
+Logger.log('想定外stopReason:'+stopReason+' content:'+JSON.stringify(content||{}).substring(0,300));
+for(var cx=0;cx<(content||[]).length;cx++)if(content[cx].type==='text'){finalReply=content[cx].text;break;}
+if(!finalReply)finalReply='処理できませんでした。もう一度お試しください。';break;}
 if(finalReply==='__SENT__')return null;
 if(!finalReply)finalReply='エラーが発生しました。\n繰り返す場合はAPIクレジット残高をご確認: https://console.anthropic.com → Billing';
 try{var _vR=finalReply,_vT=_usedTools.join(','),_vM=message,_vF=false;
