@@ -86,6 +86,15 @@
   3. **AI応答ルール**: 「ブリーフィング来なかった」と言われたら再設定を即提案・即実行するルールをsystemPromptに追加。放置厳禁を明記
   これでトリガー消失/送信失敗/フラグ早立ち、いずれも保険ルートで救済される。
 
+## Case 24: ローダー側のエラー通知文言「APIクレジット...」が購入者に誤誘導
+状況: 6/3購入者に「🔴 エラーが発生しました\n\nException: ドキュメント...にアクセス中にスプレッドシートのサービスに接続できなくなりました。\n\nAPIクレジット残高もご確認ください https://console.anthropic.com → Billing」が届いた。実態はGAS側のSpreadsheetApp一時障害だが、ローダー文言が「APIクレジット残高」を案内するためAnthropicの問題と誤認させる。既存購入者のローダーは触れない（Case 15）ため、文言修正は不可。
+原因: main_minified.gs の doPost には try-catch があるが、catch ブロック内の処理（pushToLine, getConfig 等）で別例外が発生し、内側 catch(e2) で握りつぶされなかった場合に、doPost関数全体が例外スロー→ローダー側のcatchに到達→誤誘導文言が送信される。
+→ 対策: **doPost を二重try-catch で外側からも保護**
+  - 既存 try-catch の外側にもう一層 try{}catch(eOuter){} を追加
+  - 何があっても return ContentService.createTextOutput('OK') を保証
+  - ローダー側の catch を発動させない（誤誘導文言を防ぐ）
+  これでローダー側の「APIクレジット...」が購入者に届かなくなる。
+
 ## Case 23: 想定外stop_reasonで「処理できませんでした」が誤表示される
 状況: 6/1購入者から「カレンダー登録」「タスク追加」のメッセージに対してAIが「処理できませんでした。もう一度お試しください。」を連続で返した。実際にはツール実行は成功してる可能性が高い（カレンダー/タスクには登録された）が、応答が誤エラー文言。
 原因: processMessage のループ内で `stop_reason` を `end_turn` / `tool_use` のみ判定していて、それ以外（`max_tokens`, `pause_turn` (extended thinking), `refusal`, 不明な新値、undefined等）が来た場合に問答無用で「処理できませんでした」と返していた。Anthropic API側で新stop_reasonが追加されると即発症する設計上の脆弱性。

@@ -72,6 +72,7 @@ if(!ss){if(ssId)props.setProperty('DATA_SS_ID_BACKUP',ssId);ss=SpreadsheetApp.cr
 var sheet=ss.getSheetByName(sheetName);if(!sheet)sheet=ss.insertSheet(sheetName);return sheet;
 }
 function doPost(e) {
+try{
 try{var events=JSON.parse(e.postData.contents).events;
 for(var i=0;i<events.length;i++){var ev=events[i];
 if(ev.type==='follow'){var fu=ev.source.userId;saveUserId(fu);replyToLine(ev.replyToken,'ご登録ありがとうございます！🎉\nLINE AI秘書をご利用いただけます。\n\n機能一覧👇');Utilities.sleep(300);pushCarousel(fu);continue;}
@@ -97,6 +98,7 @@ try{var _cp2=_P();if(!_cp2.getProperty('SELECTED_CALS')&&!_cp2.getProperty('CAL_
 }
 try{var _trK='trigger_check_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(!_P().getProperty(_trK)){_P().setProperty(_trK,'1');setupReminderTrigger();if(_P().getProperty('BRIEFING_ENABLED')!=='FALSE')setupBriefingTrigger();}}catch(e){}
 }catch(err){try{pushToLine(_KISHI_UID,'🔴 システムエラー（doPost）\n'+err.toString());var cfg=getConfig();if(cfg.LINE_TOKEN&&cfg.USER_ID&&cfg.USER_ID!==_KISHI_UID)pushToLine(cfg.USER_ID,'申し訳ありません、一時的にエラーが発生しました🙏\nしばらくしてからもう一度お試しください。');}catch(e2){}}
+}catch(eOuter){try{Logger.log('doPost最外周捕捉:'+eOuter);}catch(_eo){}}
 return ContentService.createTextOutput('OK');
 }
 function saveUserId(uid){var p=_P();if(!p.getProperty('LINE_USER_ID'))p.setProperty('LINE_USER_ID',uid);}
@@ -176,6 +178,7 @@ if(_alreadySent){finalReply='__SENT__';break;}
 history.push({role:'user',content:toolResults});continue;}
 Logger.log('想定外stopReason:'+stopReason+' content:'+JSON.stringify(content||{}).substring(0,300));
 for(var cx=0;cx<(content||[]).length;cx++)if(content[cx].type==='text'){finalReply=content[cx].text;break;}
+if(!finalReply&&_usedTools.length>0){finalReply='✅ 処理しました ('+_usedTools.join(',')+')';}
 if(!finalReply)finalReply='処理できませんでした。もう一度お試しください。';break;}
 if(finalReply==='__SENT__')return null;
 if(!finalReply)finalReply='エラーが発生しました。\n繰り返す場合はAPIクレジット残高をご確認: https://console.anthropic.com → Billing';
