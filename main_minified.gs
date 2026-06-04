@@ -7,7 +7,7 @@ try { return JSON.parse(t); } catch(e) { return null; }
 function getConfig(){var p=_P();return{LINE_TOKEN:p.getProperty('LINE_CHANNEL_ACCESS_TOKEN'),ANTHROPIC_KEY:p.getProperty('ANTHROPIC_API_KEY'),USER_ID:p.getProperty('LINE_USER_ID')};}
 var REMOTE_CONFIG_CACHE_KEY = 'remote_config';
 var REMOTE_CONFIG_TTL = 21600;
-var SCRIPT_CACHE = CacheService.getScriptCache();
+var SCRIPT_CACHE;try{SCRIPT_CACHE=CacheService.getScriptCache();}catch(_sc){SCRIPT_CACHE={get:function(){return null;},put:function(){},remove:function(){}};}
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 6;
 var SYSTEM_PROMPT_CARE_MANAGER = 'あなたは居宅ケアマネジャー専用のAI秘書です。以下のルールに従って動作してください。\n【あなたの役割】在宅で暮らす利用者を支える居宅ケアマネジャーの個人業務をサポートします。\n【得意なこと】\n・担当者会議・モニタリングの議事録を整形・要約する\n・カレンダーへの会議・訪問予定の登録とリマインド設定\n・申し送り・特記事項のメモ保存\n・服薬・処置スケジュールの繰り返しリマインダー\n・退院連携・緊急時のタスクリスト作成\n・ケアプラン関係書類の下書き補助\n・研修資料・プレゼン資料の叩き台作成\n・介護説明資料の画像生成（4コマ漫画・インフォグラフィック・説明イラスト）\n・Google Docsの文字起こしテキストを議事録フォーマットに整形（docs_read→整形→docs_write）\n【Google Docs連携の流れ】\nユーザーがDocsのURLを送ってきたら：1.URLからドキュメントIDを抽出 2.docs_readでfull_read=trueで全文取得 3.内容を整形 4.docs_writeで同じドキュメントに書き戻し（mode=replace）またはdocs_createで新規作成\n【記録の扱い】\n・利用者名が含まれるメッセージは記録として扱う\n・整形後は必ず次のアクション（カレンダー登録・タスク追加・リマインド設定）を提案する\n【返答スタイル】\n・簡潔に、抜け漏れなく\n・介護の専門用語はそのまま使う\n【禁止事項】\n・医療的な診断・判断はしない\n・不明な点は「主治医または専門職にご確認ください」と伝える\n【使用しないツール】以下のツールは呼び出さないでください：hotel_search / drive_folder_create / drive_file_delete / drive_file_move / drive_file_rename / sheets_create / sheets_delete / docs_delete / company';
@@ -18,7 +18,7 @@ var _ANTHROPIC_VER = '2023-06-01';
 var _HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 var _LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 var _LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
-var _KISHI_UID = PropertiesService.getScriptProperties().getProperty('KISHI_UID')||'U029395d561dbfe988aceae03cbf6affc';
+var _KISHI_UID;try{_KISHI_UID=PropertiesService.getScriptProperties().getProperty('KISHI_UID')||'U029395d561dbfe988aceae03cbf6affc';}catch(_ku){_KISHI_UID='U029395d561dbfe988aceae03cbf6affc';}
 function _haikuAsk(apiKey,prompt,maxTok){try{var r=_safeJson(UrlFetchApp.fetch(_ANTHROPIC_URL,{method:'post',contentType:'application/json',headers:{'x-api-key':apiKey,'anthropic-version':_ANTHROPIC_VER},payload:JSON.stringify({model:_HAIKU_MODEL,max_tokens:maxTok||200,messages:[{role:'user',content:prompt}]}),muteHttpExceptions:true}).getContentText());return r&&r.content&&r.content[0]?r.content[0].text.trim():'';}catch(e){return '';}}
 function _sbHeaders(key){return{'apikey':key,'Authorization':'Bearer '+key};}
 function _sbGet(url,key,path){return UrlFetchApp.fetch(url+'/rest/v1/'+path,{headers:_sbHeaders(key),muteHttpExceptions:true});}
