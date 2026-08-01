@@ -86,6 +86,16 @@
   3. **AI応答ルール**: 「ブリーフィング来なかった」と言われたら再設定を即提案・即実行するルールをsystemPromptに追加。放置厳禁を明記
   これでトリガー消失/送信失敗/フラグ早立ち、いずれも保険ルートで救済される。
 
+## Case 25: トリガー関数の例外→旧ローダーのエラー通知が止まらない（構造的遮断で解決）
+状況: Case 24対策（doPost二重try-catch + top-level API保護）後もエラー通知が継続。エラー全文が入手できず個別原因の特定は不能だった。
+根本構造: 旧ローダー（既存購入者のconfig.gs）は checkReminders / morningBriefing / dailyCheck / dailyClearCache 等のトリガー関数が例外を投げるたびに「🔴 エラーが発生しました…APIクレジット残高もご確認ください」を購入者LINEに送信する（新ローダーはdoPost以外Logger.logのみだが、既存購入者のローダーは更新できない=Case 15）。トリガー関数の内部には getDataSheet / getRange().getValue() 等、GAS一時障害で例外を投げうる箇所が多数あり、個別に潰してもキリがない。
+→ 対策: **トリガー入口の全関数を never-throw ラッパーで包む（構造的遮断）**
+  - 全トリガー関数（checkReminders, morningBriefing, sendDemoEmails, dailyClearCache, dailyCheck, weeklyReport, analyzeAiLogs）を `_xxxCore` にリネームし、`function xxx(){try{return _xxxCore();}catch(e){Logger.log}}` のラッパーを追加
+  - トリガーは関数名文字列で解決されるためラッパー名が元名ならトリガー・内部呼び出しとも無変更で動く
+  - これで「配信コードのeval成功 + 全入口がnever-throw」となり、旧ローダーのcatchは構造的に発動不能
+  - 個別エラーの原因が何であれ、購入者への誤誘導通知は二度と送られない（エラー自体はLogger.logに残る）
+検証: node --check + GAS APIモックでのeval再現テスト（doPost/全ラッパー定義確認）を実施してからpush。
+
 ## Case 24: ローダー側のエラー通知文言「APIクレジット...」が購入者に誤誘導
 状況: 6/3購入者に「🔴 エラーが発生しました\n\nException: ドキュメント...にアクセス中にスプレッドシートのサービスに接続できなくなりました。\n\nAPIクレジット残高もご確認ください https://console.anthropic.com → Billing」が届いた。実態はGAS側のSpreadsheetApp一時障害だが、ローダー文言が「APIクレジット残高」を案内するためAnthropicの問題と誤認させる。既存購入者のローダーは触れない（Case 15）ため、文言修正は不可。
 原因: main_minified.gs の doPost には try-catch があるが、catch ブロック内の処理（pushToLine, getConfig 等）で別例外が発生し、内側 catch(e2) で握りつぶされなかった場合に、doPost関数全体が例外スロー→ローダー側のcatchに到達→誤誘導文言が送信される。

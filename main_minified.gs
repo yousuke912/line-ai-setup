@@ -606,7 +606,7 @@ for(var i=data.length-1;i>=1;i--){if(data[i][4]==='DELETED')continue;
 if(data[i][3].indexOf(kw)!==-1||String(i)===kw){sheet.getRange(i+1,5).setValue('DELETED');deleted.push(data[i][3]);data[i][4]='DELETED';break;}}}
 if(!deleted.length)return _notFound(input.keyword,'リマインダー');return'削除完了: '+deleted.join(', ');
 }
-function checkReminders() {
+function _checkRemindersCore() {
 var config=getConfig();if(!config.LINE_TOKEN||!config.USER_ID)return;
 if(_P().getProperty('DEMO_MODE')==='TRUE'&&parseInt(_P().getProperty('demo_count_'+config.USER_ID)||'0')>=10)return;
 var sheet=getDataSheet('リマインダー'),lr=sheet.getLastRow();if(lr<=1)return;
@@ -670,7 +670,7 @@ return'🎨 画像を生成しました！\n\n'+(input.title||style)+'\n📎 '+f
 }catch(e){return'⚠️ 画像生成エラー: '+e.toString();}
 }
 function _listItems(lines,emoji,label,items,max){if(!items.length)return;lines.push(emoji+' '+label+'（'+items.length+'件）');for(var i=0;i<Math.min(items.length,max);i++)lines.push('・'+items[i]);if(items.length>max)lines.push('  ...他'+(items.length-max)+'件');lines.push('');}
-function weeklyReport() {
+function _weeklyReportCore() {
 var c=getConfig();if(!c.LINE_TOKEN||!c.USER_ID)return;
 var props=_P(),wp=props.getProperty('WEEKLY_REPORT_'+c.USER_ID);if(wp==='FALSE')return;
 var ac=parseInt(props.getProperty('WEEKLY_ASK_COUNT_'+c.USER_ID)||'0');if(!wp&&ac>=2)return;
@@ -683,7 +683,7 @@ if(evts.length>0){lines.push('📅 来週の予定（'+evts.length+'件）');for
 if(!wp){lines.push('---','📩 この週次まとめを毎週届けますか？','「週次まとめON」→ 毎週届く','「週次まとめOFF」→ 届かない');props.setProperty('WEEKLY_ASK_COUNT_'+c.USER_ID,String(ac+1));}
 pushToLine(c.USER_ID,lines.join('\n'));
 }
-function analyzeAiLogs() {
+function _analyzeAiLogsCore() {
 var props=_P();
 var sbUrl=props.getProperty('CMS_SUPABASE_URL'),sbKey=props.getProperty('CMS_SUPABASE_KEY'),apiKey=props.getProperty('ANTHROPIC_API_KEY');
 if(!sbUrl||!sbKey||!apiKey)return;
@@ -976,7 +976,7 @@ return '⚠️ 朝のスケジュール確認の設定で問題が発生しま�
 }
 return '☀️ 毎朝' + hour + '時に予定をお届けします！';
 }
-function morningBriefing() {
+function _morningBriefingCore() {
 var config=getConfig();if(!config.LINE_TOKEN||!config.USER_ID)return;
 if(_P().getProperty('BRIEFING_ENABLED')==='FALSE')return;
 var bKey2='briefing_sent_'+Utilities.formatDate(new Date(),'Asia/Tokyo','yyyyMMdd');if(_P().getProperty(bKey2)){return;}
@@ -1193,7 +1193,7 @@ function pushCarousel(userId) {
 var c=getConfig();if(!c.LINE_TOKEN||!userId)return;
 _lineMsg(_LINE_PUSH_URL,c.LINE_TOKEN,{to:userId,messages:[getCarouselMessage()]});
 }
-function sendDemoEmails() {
+function _sendDemoEmailsCore() {
 if(_P().getProperty('DEMO_MODE')!=='TRUE')return;
 var cfg=getConfig(),count=parseInt(_P().getProperty('demo_count_'+(cfg.USER_ID||''))||'0');
 if(count>=10)return;
@@ -1207,7 +1207,7 @@ function setupDemoEmailTrigger() {
 _setupTrigger('sendDemoEmails');
 ScriptApp.newTrigger('sendDemoEmails').timeBased().atHour(8).everyDays(1).create();
 }
-function dailyClearCache() {
+function _dailyClearCacheCore() {
 CacheService.getScriptCache().remove('remote_code_v1');
 try { dailyBackup(); } catch(e) {}
 try { cleanOldAiLogs(); } catch(e) {}
@@ -1252,7 +1252,7 @@ function setupDailyCacheClearTrigger() {
 _setupTrigger('dailyClearCache');
 ScriptApp.newTrigger('dailyClearCache').timeBased().atHour(3).everyDays(1).create();
 }
-function dailyCheck(){var c=getConfig(),p=_P(),iss=[],fix=[];
+function _dailyCheckCore(){var c=getConfig(),p=_P(),iss=[],fix=[];
 if(!c.LINE_TOKEN)iss.push('🔴 LINE_TOKEN未設定');
 if(!c.ANTHROPIC_KEY)iss.push('🔴 ANTHROPIC_KEY未設定');
 else if(c.ANTHROPIC_KEY.indexOf('sk-ant-')!==0)iss.push('🔴 APIキー形式不正');
@@ -1306,3 +1306,11 @@ if(cached){try{return JSON.parse(cached);}catch(e){}}
 try{var res=_sbGet(cp.sbUrl,cp.sbKey,'account_settings?account_id=eq.'+cp.clientId+'&select=*');if(res.getResponseCode()!==200)return null;var d=_safeJson(res.getContentText());if(!d||!d.length)return null;try{cache.put(ck,JSON.stringify(d[0]),60);}catch(e){}return d[0];}catch(e){return null;}
 }
 function createCarePlanSheet(ssId){try{var ss=SpreadsheetApp.openById(ssId);if(ss.getSheetByName('担当者会議記録'))return;var sh=ss.insertSheet('担当者会議記録');var hd=['日付','利用者名','出席者','決定事項','次回会議予定','担当CM備考','作成日時'];sh.getRange(1,1,1,hd.length).setValues([hd]);var hr=sh.getRange(1,1,1,hd.length);hr.setBackground('#1E4E8C');hr.setFontColor('#FFFFFF');hr.setFontWeight('bold');sh.setColumnWidth(1,100);sh.setColumnWidth(2,120);sh.setColumnWidth(3,200);sh.setColumnWidth(4,300);sh.setFrozenRows(1);}catch(e){}}
+// 2026-08-01 Case25: トリガー入口ラッパー。例外を絶対に外へ出さない（旧ローダーのエラー通知を構造的に遮断）
+function checkReminders(){try{return _checkRemindersCore();}catch(e){try{Logger.log("checkReminders捕捉:"+e);}catch(_e){}}}
+function weeklyReport(){try{return _weeklyReportCore();}catch(e){try{Logger.log("weeklyReport捕捉:"+e);}catch(_e){}}}
+function analyzeAiLogs(){try{return _analyzeAiLogsCore();}catch(e){try{Logger.log("analyzeAiLogs捕捉:"+e);}catch(_e){}}}
+function morningBriefing(){try{return _morningBriefingCore();}catch(e){try{Logger.log("morningBriefing捕捉:"+e);}catch(_e){}}}
+function sendDemoEmails(){try{return _sendDemoEmailsCore();}catch(e){try{Logger.log("sendDemoEmails捕捉:"+e);}catch(_e){}}}
+function dailyClearCache(){try{return _dailyClearCacheCore();}catch(e){try{Logger.log("dailyClearCache捕捉:"+e);}catch(_e){}}}
+function dailyCheck(){try{return _dailyCheckCore();}catch(e){try{Logger.log("dailyCheck捕捉:"+e);}catch(_e){}}}
