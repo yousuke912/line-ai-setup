@@ -86,6 +86,16 @@
   3. **AI応答ルール**: 「ブリーフィング来なかった」と言われたら再設定を即提案・即実行するルールをsystemPromptに追加。放置厳禁を明記
   これでトリガー消失/送信失敗/フラグ早立ち、いずれも保険ルートで救済される。
 
+## Case 26: 「APIクレジット残高が不足している可能性」毎分通知の正体はv3ローダーのeval失敗誤表示
+状況: 8/1 14:16から購入者LINEに「⚠️ APIクレジット残高が不足している可能性があります」が毎分・計297件。購入者のAnthropicコンソールは残高$11.89・使用0%で、クレジットは完全に無関係だった。
+特定方法: 文言が現行コードに存在しない → `git log --all -S "不足している可能性"` でsetup-v3.html（3月末世代のローダー）から発見。v3ローダーのloadAndExec catchは `errStr.indexOf("Unexpected token") !== -1` のとき（=evalの構文エラー）この文言を送る。レート制限なし＋checkRemindersの1分トリガー → 毎分通知。
+真因: GAS→GASのUrlFetchでConfig ServerがGoogleのHTML認証壁（ppConfigページ）を返した（4月と同じ現象。外部からのcurl/ブラウザは正常なのにGAS発だけHTMLが返る）。HTMLには「function」という語が含まれるためv3ローダーの`indexOf("function")`検証をすり抜けてキャッシュ（1時間）され、eval→Unexpected token→誤表示のループ。
+→ 対処: **Config Serverのウェブアプリを新バージョンで再デプロイ**（URL不変）。4月に続き2回目の実績で、GAS発fetchへのHTML壁はこれで解消する。Chrome操作で再デプロイまで実施（バージョン13・2026/08/01 20:13）。
+教訓:
+  1. **エラー文言はまずgit履歴を全文検索**（`git log -S`）。どの世代のローダー/コードが出してるか一発で特定でき、「現行コードに無い=旧世代が動いてる」が分かる
+  2. 「APIクレジット」系の文言でも実態はeval失敗のことがある。残高確認と切り分けを最初にやる
+  3. GAS→GAS fetchのHTML壁は外部からのcurlでは再現しない。購入者側だけ落ちてインフラ検査が全部緑のときはこれを疑い、再デプロイを試す
+
 ## Case 25: トリガー関数の例外→旧ローダーのエラー通知が止まらない（構造的遮断で解決）
 状況: Case 24対策（doPost二重try-catch + top-level API保護）後もエラー通知が継続。エラー全文が入手できず個別原因の特定は不能だった。
 根本構造: 旧ローダー（既存購入者のconfig.gs）は checkReminders / morningBriefing / dailyCheck / dailyClearCache 等のトリガー関数が例外を投げるたびに「🔴 エラーが発生しました…APIクレジット残高もご確認ください」を購入者LINEに送信する（新ローダーはdoPost以外Logger.logのみだが、既存購入者のローダーは更新できない=Case 15）。トリガー関数の内部には getDataSheet / getRange().getValue() 等、GAS一時障害で例外を投げうる箇所が多数あり、個別に潰してもキリがない。
