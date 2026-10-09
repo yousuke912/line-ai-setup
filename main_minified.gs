@@ -11,11 +11,14 @@ var SCRIPT_CACHE;try{SCRIPT_CACHE=CacheService.getScriptCache();}catch(_sc){SCRI
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 6;
 var SYSTEM_PROMPT_CARE_MANAGER = 'あなたは居宅ケアマネジャー専用のAI秘書です。以下のルールに従って動作してください。\n【あなたの役割】在宅で暮らす利用者を支える居宅ケアマネジャーの個人業務をサポートします。\n【得意なこと】\n・担当者会議・モニタリングの議事録を整形・要約する\n・カレンダーへの会議・訪問予定の登録とリマインド設定\n・申し送り・特記事項のメモ保存\n・服薬・処置スケジュールの繰り返しリマインダー\n・退院連携・緊急時のタスクリスト作成\n・ケアプラン関係書類の下書き補助\n・研修資料・プレゼン資料の叩き台作成\n・介護説明資料の画像生成（4コマ漫画・インフォグラフィック・説明イラスト）\n・Google Docsの文字起こしテキストを議事録フォーマットに整形（docs_read→整形→docs_write）\n【Google Docs連携の流れ】\nユーザーがDocsのURLを送ってきたら：1.URLからドキュメントIDを抽出 2.docs_readでfull_read=trueで全文取得 3.内容を整形 4.docs_writeで同じドキュメントに書き戻し（mode=replace）またはdocs_createで新規作成\n【記録の扱い】\n・利用者名が含まれるメッセージは記録として扱う\n・整形後は必ず次のアクション（カレンダー登録・タスク追加・リマインド設定）を提案する\n【返答スタイル】\n・簡潔に、抜け漏れなく\n・介護の専門用語はそのまま使う\n【禁止事項】\n・医療的な診断・判断はしない\n・不明な点は「主治医または専門職にご確認ください」と伝える\n【使用しないツール】以下のツールは呼び出さないでください：hotel_search / drive_folder_create / drive_file_delete / drive_file_move / drive_file_rename / sheets_create / sheets_delete / docs_delete / company';
-function selectModel(msg){if(/まとめて|議事録|報告書|ケアプラン|アセスメント|要約|作成して|書いて|研修|資料|整形/.test(msg))return'claude-sonnet-4-5';if(/予定.*(追加|確認|削除|変更)|タスク.*(追加|完了|確認|削除)|メモ.*(保存|確認|追加|削除)|リマインド.*(設定|確認|削除)|今日の予定|天気|経路|ブリーフィング|カレンダー|申し送り.*メモ/.test(msg))return _HAIKU_MODEL;return _HAIKU_MODEL;}
+function selectModel(msg){if(/まとめて|議事録|報告書|ケアプラン|アセスメント|要約|作成して|書いて|研修|資料|整形/.test(msg))return _SONNET_MODEL;if(/予定.*(追加|確認|削除|変更)|タスク.*(追加|完了|確認|削除)|メモ.*(保存|確認|追加|削除)|リマインド.*(設定|確認|削除)|今日の予定|天気|経路|ブリーフィング|カレンダー|申し送り.*メモ/.test(msg))return _HAIKU_MODEL;return _HAIKU_MODEL;}
 function selectMaxTokens(msg){if(/まとめて|議事録|報告書|整形/.test(msg))return 1500;if(/ケアプラン|アセスメント|作成して|研修|資料/.test(msg))return 1200;if(/ブリーフィング/.test(msg))return 800;if(/検索|天気|経路|教えて/.test(msg))return 600;if(/予定|タスク|メモ|リマインド|追加|完了|削除/.test(msg))return 300;return 500;}
 var _ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 var _ANTHROPIC_VER = '2023-06-01';
 var _HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+// Sonnet 4.5 は 2026/11/30 停止のため 4.6 へ（Case 35）。廃止モデルは _MODEL_FALLBACK で自動回避する
+var _SONNET_MODEL = 'claude-sonnet-4-6';
+var _MODEL_FALLBACK = {'claude-sonnet-4-6':'claude-haiku-4-5-20251001','claude-haiku-4-5-20251001':'claude-sonnet-4-6'};
 var _LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 var _LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 var _KISHI_UID;try{_KISHI_UID=PropertiesService.getScriptProperties().getProperty('KISHI_UID')||'U029395d561dbfe988aceae03cbf6affc';}catch(_ku){_KISHI_UID='U029395d561dbfe988aceae03cbf6affc';}
@@ -269,15 +272,15 @@ var lastMsg='';for(var hi=history.length-1;hi>=0;hi--)if(history[hi].role==='use
 var selTools=isReplyMode?[]:selectTools(lastMsg);
 if(selTools.length>0)selTools[selTools.length-1].cache_control={type:'ephemeral'};
 var _co=!isReplyMode&&/^(おはよう|こんにちは|こんばんは|ありがとう|ありがと|おやすみ|お疲れ|了解|OK|ok|はい|うん|わかった|なるほど|すごい|いいね|ヘルプ|何ができる|使い方|こんにちわ|よろしく|お願い|大丈夫|わかりました|あ|m|テスト|。|笑|w+|草)$/i.test(lastMsg.trim().replace(/[！!？?。、\s]+$/g,''));
-var _mdl=_co?_HAIKU_MODEL:(jobType==='care_manager'?selectModel(lastMsg):'claude-sonnet-4-5');
+var _mdl=_co?_HAIKU_MODEL:(jobType==='care_manager'?selectModel(lastMsg):_SONNET_MODEL);
 var _mtk=_co?300:(jobType==='care_manager'?selectMaxTokens(lastMsg):800);
 var payload={model:_mdl,max_tokens:_mtk,system:[{type:'text',text:systemPrompt,cache_control:{type:'ephemeral'}}],tools:_co?[]:selTools,messages:history};
 var _maxRetry=2,_lastErrRes=null;
 for(var _ri=0;_ri<=_maxRetry;_ri++){
 if(_ri>0)Utilities.sleep(3000);
-try{var res=UrlFetchApp.fetch(_ANTHROPIC_URL,{method:'post',contentType:'application/json',headers:{'x-api-key':apiKey,'anthropic-version':_ANTHROPIC_VER,'anthropic-beta':'prompt-caching-2024-07-31'},payload:JSON.stringify(payload),muteHttpExceptions:true});
+try{var res=UrlFetchApp.fetch(_ANTHROPIC_URL,{method:'post',contentType:'application/json',headers:{'x-api-key':apiKey,'anthropic-version':_ANTHROPIC_VER,'anthropic-beta':'prompt-caching-2024-07-31'},payload:JSON.stringify(payload,function(k,v){return k==='_fb'?undefined:v;}),muteHttpExceptions:true});
 var raw=res.getContentText(),hc=res.getResponseCode();if(raw.charAt(0)==='<')return{_credit_error:true};
-var r=JSON.parse(raw);if(r.error){var et=r.error.type||'',em=r.error.message||'';if(et==='billing_error'||em.indexOf('credit')!==-1||em.indexOf('balance')!==-1||et==='insufficient_quota')return{_credit_error:true};_lastErrRes={_api_error:true,_err_type:et,_err_msg:em,_http_code:hc};if(hc===529&&_ri<_maxRetry)continue;return _lastErrRes;}return r;
+var r=JSON.parse(raw);if(r.error){var et=r.error.type||'',em=r.error.message||'';if(et==='billing_error'||em.indexOf('credit')!==-1||em.indexOf('balance')!==-1||et==='insufficient_quota')return{_credit_error:true};_lastErrRes={_api_error:true,_err_type:et,_err_msg:em,_http_code:hc};if(hc===529&&_ri<_maxRetry)continue;var _fb=_MODEL_FALLBACK[payload.model];if(_fb&&!payload._fb&&(hc===404||et==='not_found_error'||hc===529||et==='overloaded_error')){payload.model=_fb;payload._fb=1;_ri=-1;continue;}return _lastErrRes;}return r;
 }catch(err){_lastErrRes={_api_error:true,_err_type:'exception',_err_msg:String(err),_http_code:0};if(_ri<_maxRetry)continue;return _lastErrRes;}}
 return _lastErrRes||{_api_error:true,_err_type:'unknown',_http_code:0};
 }
@@ -1208,7 +1211,7 @@ _setupTrigger('sendDemoEmails');
 ScriptApp.newTrigger('sendDemoEmails').timeBased().atHour(8).everyDays(1).create();
 }
 function _dailyClearCacheCore() {
-CacheService.getScriptCache().remove('remote_code_v1');
+// remote_code_v1 は消さない（毎日の取り直しがHTML混入→13通エラー発作の入口だった。Case 35）
 try { dailyBackup(); } catch(e) {}
 try { cleanOldAiLogs(); } catch(e) {}
 try { dailyErrorReport(); } catch(e) {}
