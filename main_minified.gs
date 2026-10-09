@@ -624,6 +624,9 @@ if(data[i][4]==='TRUE'||data[i][4]===true||data[i][4]==='DELETED')continue;
 var rpC=String(data[i][5]||'none');
 if(rpC.indexOf('monthly_weekday_')===0){try{var raC=_parseRawDt(data[i][2]);if(raC&&!isNaN(raC.getTime())){var ptC=rpC.split('_'),nC=parseInt(ptC[2]),wC=parseInt(ptC[3]);if(raC.getDay()!==wC){var fC=getMonthlyWeekday(raC,nC,wC);if(fC.getTime()<Date.now())fC=getNextMonthlyWeekday(fC,nC,wC);sheet.getRange(i+1,3).setValue(fC.getTime());SpreadsheetApp.flush();Logger.log('リマインダー日付自動補正: '+data[i][3]+' / '+raC.toString()+' → '+fC.toString());continue;}}}catch(eC){Logger.log('日付補正エラー:'+eC);}}
 var ra;try{ra=_parseRawDt(data[i][2]);}catch(e){continue;}if(!ra||isNaN(ra.getTime())||ra.getTime()>nowEp)continue;
+// Case 37: 2時間以上前に過ぎたリマインダーは送らない（停止明けに数ヶ月分が一気に届く事故の防止）。
+// 1回きり→送信済みにする／繰り返し→今より後の回まで進める。
+if(nowEp-ra.getTime()>7200000){try{var repS=String(data[i][5]||'none');if(repS==='none'){sheet.getRange(i+1,5).setValue('TRUE');}else{var nx=new Date(ra.getTime()),g=0;while(nx.getTime()<=nowEp&&g<3000){g++;if(repS==='daily')nx.setDate(nx.getDate()+1);else if(repS==='weekly')nx.setDate(nx.getDate()+7);else if(repS==='monthly')nx.setMonth(nx.getMonth()+1);else if(repS==='yearly')nx.setFullYear(nx.getFullYear()+1);else if(repS.indexOf('monthly_weekday_')===0){var pS=repS.split('_');nx=getNextMonthlyWeekday(nx,parseInt(pS[2]),parseInt(pS[3]));}else break;}if(nx.getTime()>nowEp){sheet.getRange(i+1,3).setValue(nx.getTime());sheet.getRange(i+1,5).setValue('FALSE');}else{sheet.getRange(i+1,5).setValue('TRUE');}}SpreadsheetApp.flush();Logger.log('期限切れリマインダーを送らずに処理: '+data[i][3]);}catch(eS){Logger.log('期限切れ処理エラー:'+eS);}continue;}
 var freshStatus=sheet.getRange(i+1,5).getValue();
 if(freshStatus==='TRUE'||freshStatus===true){Logger.log('リマインダー送信スキップ(最新getValueがTRUE): '+data[i][3]);continue;}
 var rid=String(data[i][0]),dupKey='rem_sent_'+rid+'_'+ra.getTime();if(sc.get(dupKey))continue;
