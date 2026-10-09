@@ -464,3 +464,14 @@ try{if(c.get("rc_keep")===null){var s=c.get("remote_code_v1");
 - **masterとminifiedは構造が別物になっている**（masterに `_HAIKU_MODEL` も `selectModel` も無い）。masterからminifyし直すと本番が退行する。
   当面は本番=minified を正とし、masterへは同じ置換だけ反映する
 - モデルの廃止表は半年ごとに確認する（次: Haiku 4.5 の停止告知に注意）
+
+## Case 36: 「エラーが100回くらい来る」— 3月版ローダーの毎分GitHub取得を止める（2026/10/9 commit 35ffd96）
+- 3月版(setup-v3)ローダーは **キャッシュ→GitHub(LOADER_CODE_URL)→Config Server** の順。GitHubの本体は146KBで保存できず、
+  **1分トリガーで1日1440回GitHubへ取りに行く**。まれにHTMLを掴むと1時間キャッシュ→毎分エラー通知＝約60〜100通。
+  Config Server側のブートストラップ（Case 31/34）はこの世代には届いていなかった。
+- 対策：本体の冒頭で `_seedLoaderCache_()` を実行。`remote_code_v1` が空なら、Config Serverと**バイト一致**の
+  読み込み役（52KB）を6時間で置く。以後はローダーがキャッシュから読み込み役を使い、keep-alive で延命される。
+- 検証（3月版ローダーを忠実に再現・1分トリガー・24時間）:
+  GitHubが200回に1回HTML → 修正前 300通/日・取得1145回 → **修正後 0通・取得5回**／20回に1回HTML → 修正前1080通 → **修正後0通**。無反応0件。
+- **絶対に守ること**：GitHubの `main_minified.gs` は常に「本体」のままにする。読み込み役（v16）はキャッシュに長期間残り、
+  ここを本体として取りに来る。ここを読み込み役に差し替えると自分自身を無限に読み込んで全員エラーになる。
