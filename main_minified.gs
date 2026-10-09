@@ -8,10 +8,9 @@ function getConfig(){var p=_P();return{LINE_TOKEN:p.getProperty('LINE_CHANNEL_AC
 var REMOTE_CONFIG_CACHE_KEY = 'remote_config';
 var REMOTE_CONFIG_TTL = 21600;
 var SCRIPT_CACHE;try{SCRIPT_CACHE=CacheService.getScriptCache();}catch(_sc){SCRIPT_CACHE={get:function(){return null;},put:function(){},remove:function(){}};}
-// Case 36: 本体が直接読み込まれた（3月版ローダーがGitHubから146KBを取った）ときは、ローダーの保存枠
-// remote_code_v1 に小さな読み込み役（Config Serverと同一の52KB）を置く。146KBは保存できず毎分GitHubへ
-// 取りに行き、まれにHTMLを掴んで1時間・毎分のエラー通知（約100通）になっていたため。既にあれば何もしない。
-function _seedLoaderCache_(){try{var c=CacheService.getScriptCache();if(c.get("remote_code_v1")!==null)return;var b="function __ldMain_(){\n  try{\n    var c=CacheService.getScriptCache();\n    try{if(c.get(\"rc_keep\")===null){var s=c.get(\"remote_code_v1\");\n      if(s&&s.charAt(0)!==\"<\"&&s.indexOf(\"__ldMain_\")!==-1){c.put(\"remote_code_v1\",s,21600);c.put(\"rc_keep\",\"1\",1800);}}}catch(e0){}\n    var a=c.get(\"mcode_1\"),b=c.get(\"mcode_2\"),d=c.get(\"mcode_3\");\n    if(a!==null&&b!==null&&d!==null){var k=a+b+d;if(k.indexOf(\"function doPost\")!==-1)return k;}\n    var r=UrlFetchApp.fetch(\"https://raw.githubusercontent.com/yousuke912/line-ai-setup/main/main_minified.gs\",{muteHttpExceptions:true});\n    if(r.getResponseCode()!==200)return \"\";\n    var t=r.getContentText();\n    if(!t)return \"\";\n    if(t.charAt(0)===\"<\")return \"\";\n    if(t.length<50000)return \"\";\n    if(t.indexOf(\"function doPost\")===-1)return \"\";\n    try{var n=Math.ceil(t.length/3);\n        c.put(\"mcode_1\",t.slice(0,n),21600);\n        c.put(\"mcode_2\",t.slice(n,n+n),21600);\n        c.put(\"mcode_3\",t.slice(n+n),21600);}catch(e2){}\n    return t;\n  }catch(e){return \"\";}\n}\neval(__ldMain_());";var u="PADDING FOR LEGACY dailyCheck LENGTH CHECK. DO NOT REMOVE. ",p="";while(b.length+p.length<52000){p+=u;}c.put("remote_code_v1",b+"\n/* "+p+" */\n",21600);}catch(e){}}
+// Case 36/38: ローダーの保存枠 remote_code_v1 に、Config Serverと同一の読み込み役（v17）を置く。
+// 空のとき（3月版ローダーがGitHubから146KBを直接取った）と、古い版（v16）のときに置き換える。HTMLは触らない（本体が動いていない）。
+function _seedLoaderCache_(){try{var c=CacheService.getScriptCache(),cur=c.get("remote_code_v1");if(cur!==null&&cur.indexOf("//BOOT_V17")!==-1)return;var b="function __ldMain_(){\n  try{\n    var c=CacheService.getScriptCache();\n    try{if(c.get(\"rc_keep\")===null){var s=c.get(\"remote_code_v1\");\n      if(s&&s.charAt(0)!==\"<\"&&s.indexOf(\"__ldMain_\")!==-1){c.put(\"remote_code_v1\",s,21600);c.put(\"rc_keep\",\"1\",1800);}}}catch(e0){}\n    var a=c.get(\"mcode_1\"),b=c.get(\"mcode_2\"),d=c.get(\"mcode_3\");\n    if(a!==null&&b!==null&&d!==null){var k=a+b+d;if(__ldOk_(k))return k;}\n    var t=__ldFetch_(\"https://raw.githubusercontent.com/yousuke912/line-ai-setup/main/main_minified.gs\");\n    if(!t)t=__ldFetch_(\"https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3RF3SJVIKuIG0WFGyMzmlbvy--O9qqoDiXLi4zP4O-xw/exec?type=full\");\n    if(!t)return \"\";\n    try{var n=Math.ceil(t.length/3);\n        c.put(\"mcode_1\",t.slice(0,n),21600);\n        c.put(\"mcode_2\",t.slice(n,n+n),21600);\n        c.put(\"mcode_3\",t.slice(n+n),21600);}catch(e2){}\n    return t;\n  }catch(e){return \"\";}\n}\nfunction __ldOk_(t){return !!t&&t.charAt(0)!==\"<\"&&t.length>=50000&&t.indexOf(\"function doPost\")!==-1&&t.indexOf(\"function __ldMain_(){\")!==0;}\nfunction __ldFetch_(u){try{var r=UrlFetchApp.fetch(u,{muteHttpExceptions:true});if(r.getResponseCode()!==200)return \"\";var t=r.getContentText();return __ldOk_(t)?t:\"\";}catch(e){return \"\";}}\n//BOOT_V17\neval(__ldMain_());";var u="PADDING FOR LEGACY dailyCheck LENGTH CHECK. DO NOT REMOVE. ",p="";while(b.length+p.length<52000){p+=u;}c.put("remote_code_v1",b+"\n/* "+p+" */\n",21600);}catch(e){}}
 _seedLoaderCache_();
 var HISTORY_PREFIX = 'h_';
 var MAX_TURNS = 6;
@@ -21,9 +20,9 @@ function selectMaxTokens(msg){if(/まとめて|議事録|報告書|整形/.test(
 var _ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 var _ANTHROPIC_VER = '2023-06-01';
 var _HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-// Sonnet 4.5 は 2026/11/30 停止のため 4.6 へ（Case 35）。廃止モデルは _MODEL_FALLBACK で自動回避する
-var _SONNET_MODEL = 'claude-sonnet-4-6';
-var _MODEL_FALLBACK = {'claude-sonnet-4-6':'claude-haiku-4-5-20251001','claude-haiku-4-5-20251001':'claude-sonnet-4-6'};
+// 既定は Sonnet 5.5（Case 38）。使えない時は 4.6 → Haiku 4.5 の順に自動で切り替える（最大2回）
+var _SONNET_MODEL = 'claude-sonnet-5-5';
+var _MODEL_FALLBACK = {'claude-sonnet-5-5':'claude-sonnet-4-6','claude-sonnet-4-6':'claude-haiku-4-5-20251001','claude-haiku-4-5-20251001':'claude-sonnet-4-6'};
 var _LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 var _LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 var _KISHI_UID;try{_KISHI_UID=PropertiesService.getScriptProperties().getProperty('KISHI_UID')||'U029395d561dbfe988aceae03cbf6affc';}catch(_ku){_KISHI_UID='U029395d561dbfe988aceae03cbf6affc';}
@@ -278,14 +277,14 @@ var selTools=isReplyMode?[]:selectTools(lastMsg);
 if(selTools.length>0)selTools[selTools.length-1].cache_control={type:'ephemeral'};
 var _co=!isReplyMode&&/^(おはよう|こんにちは|こんばんは|ありがとう|ありがと|おやすみ|お疲れ|了解|OK|ok|はい|うん|わかった|なるほど|すごい|いいね|ヘルプ|何ができる|使い方|こんにちわ|よろしく|お願い|大丈夫|わかりました|あ|m|テスト|。|笑|w+|草)$/i.test(lastMsg.trim().replace(/[！!？?。、\s]+$/g,''));
 var _mdl=_co?_HAIKU_MODEL:(jobType==='care_manager'?selectModel(lastMsg):_SONNET_MODEL);
-var _mtk=_co?300:(jobType==='care_manager'?selectMaxTokens(lastMsg):800);
+var _mtk=_co?300:(jobType==='care_manager'?selectMaxTokens(lastMsg):1000);
 var payload={model:_mdl,max_tokens:_mtk,system:[{type:'text',text:systemPrompt,cache_control:{type:'ephemeral'}}],tools:_co?[]:selTools,messages:history};
 var _maxRetry=2,_lastErrRes=null;
 for(var _ri=0;_ri<=_maxRetry;_ri++){
 if(_ri>0)Utilities.sleep(3000);
-try{var res=UrlFetchApp.fetch(_ANTHROPIC_URL,{method:'post',contentType:'application/json',headers:{'x-api-key':apiKey,'anthropic-version':_ANTHROPIC_VER,'anthropic-beta':'prompt-caching-2024-07-31'},payload:JSON.stringify(payload,function(k,v){return k==='_fb'?undefined:v;}),muteHttpExceptions:true});
+try{var res=UrlFetchApp.fetch(_ANTHROPIC_URL,{method:'post',contentType:'application/json',headers:{'x-api-key':apiKey,'anthropic-version':_ANTHROPIC_VER},payload:JSON.stringify(payload,function(k,v){return k==='_fb'?undefined:v;}),muteHttpExceptions:true});
 var raw=res.getContentText(),hc=res.getResponseCode();if(raw.charAt(0)==='<')return{_credit_error:true};
-var r=JSON.parse(raw);if(r.error){var et=r.error.type||'',em=r.error.message||'';if(et==='billing_error'||em.indexOf('credit')!==-1||em.indexOf('balance')!==-1||et==='insufficient_quota')return{_credit_error:true};_lastErrRes={_api_error:true,_err_type:et,_err_msg:em,_http_code:hc};if(hc===529&&_ri<_maxRetry)continue;var _fb=_MODEL_FALLBACK[payload.model];if(_fb&&!payload._fb&&(hc===404||et==='not_found_error'||hc===529||et==='overloaded_error')){payload.model=_fb;payload._fb=1;_ri=-1;continue;}return _lastErrRes;}return r;
+var r=JSON.parse(raw);if(r.error){var et=r.error.type||'',em=r.error.message||'';if(et==='billing_error'||em.indexOf('credit')!==-1||em.indexOf('balance')!==-1||et==='insufficient_quota')return{_credit_error:true};_lastErrRes={_api_error:true,_err_type:et,_err_msg:em,_http_code:hc};if(hc===529&&_ri<_maxRetry)continue;var _fb=_MODEL_FALLBACK[payload.model];if(_fb&&(payload._fb||0)<2&&(hc===404||et==='not_found_error'||hc===529||et==='overloaded_error'||(hc===400&&/model|beta|support/i.test(em)))){payload.model=_fb;payload._fb=(payload._fb||0)+1;_ri=-1;continue;}return _lastErrRes;}return r;
 }catch(err){_lastErrRes={_api_error:true,_err_type:'exception',_err_msg:String(err),_http_code:0};if(_ri<_maxRetry)continue;return _lastErrRes;}}
 return _lastErrRes||{_api_error:true,_err_type:'unknown',_http_code:0};
 }
@@ -616,6 +615,7 @@ if(!deleted.length)return _notFound(input.keyword,'リマインダー');return'�
 }
 function _checkRemindersCore() {
 var config=getConfig();if(!config.LINE_TOKEN||!config.USER_ID)return;
+_sendHeartbeat_(config);
 if(_P().getProperty('DEMO_MODE')==='TRUE'&&parseInt(_P().getProperty('demo_count_'+config.USER_ID)||'0')>=10)return;
 var sheet=getDataSheet('リマインダー'),lr=sheet.getLastRow();if(lr<=1)return;
 var data=sheet.getRange(1,1,lr,6).getValues(),nowEp=Date.now(),sc=CacheService.getScriptCache();
@@ -652,6 +652,8 @@ for(var fi=0;fi<fuEvts.length;fi++){var fk='fu_'+fuEvts[fi].getId();if(fc.get(fk
 try{var bProps=_P();if(bProps.getProperty('BRIEFING_ENABLED')!=='FALSE'){var bNow=new Date(),bH=parseInt(Utilities.formatDate(bNow,'Asia/Tokyo','HH'),10),bM=parseInt(Utilities.formatDate(bNow,'Asia/Tokyo','mm'),10),bTarget=parseInt(bProps.getProperty('BRIEFING_HOUR')||'7',10),bKey='briefing_sent_'+Utilities.formatDate(bNow,'Asia/Tokyo','yyyyMMdd');if(bH===bTarget&&bM===0&&!bProps.getProperty(bKey)){morningBriefing();}}}catch(e){}
 try{var _calP=_P();if(!_calP.getProperty('SELECTED_CALS')&&!_calP.getProperty('CAL_SETUP_NOTIFIED_V2')){_calP.setProperty('CAL_SETUP_NOTIFIED_V2','TRUE');pushToLine(config.USER_ID,'📅 カレンダー設定のご確認\n\nGoogleカレンダーが複数ある場合、どれをLINE AI秘書に反映するか選べます。\n\n「カレンダー設定」と送ると一覧が表示されます。\n選択しない場合は今まで通り全カレンダーが対象です。');}}catch(e){}
 }
+// Case 38: 生存確認。止まっているBotを早く見つけるため、6時間に1回 scriptId・Bot名・トリガー名・モデルだけを送る（トークンは送らない）
+function _sendHeartbeat_(config){try{var c=CacheService.getScriptCache();if(c.get('hb_sent'))return;c.put('hb_sent','1',21600);var bot='';try{var bi=_safeJson(UrlFetchApp.fetch('https://api.line.me/v2/bot/info',{headers:{Authorization:'Bearer '+config.LINE_TOKEN},muteHttpExceptions:true}).getContentText());if(bi&&bi.displayName)bot=bi.displayName;}catch(e1){}var tr='';try{tr=ScriptApp.getProjectTriggers().map(function(t){return t.getHandlerFunction();}).join(',');}catch(e2){}var sid='';try{sid=ScriptApp.getScriptId();}catch(e3){}if(!sid)return;var u=(_P().getProperty('MASTER_CONFIG_URL')||'https://script.google.com/macros/s/AKfycbyVsCDTmvXjwKzF82bGUHD5Sp3RF3SJVIKuIG0WFGyMzmlbvy--O9qqoDiXLi4zP4O-xw/exec');UrlFetchApp.fetch(u+(u.indexOf('?')===-1?'?':'&')+'type=hb&scid='+encodeURIComponent(sid)+'&bot='+encodeURIComponent(bot)+'&v=m20261009&tr='+encodeURIComponent(tr)+'&m='+encodeURIComponent(_SONNET_MODEL),{muteHttpExceptions:true});}catch(e){}}
 function toolSmartSearch(input) {
 var kw=input.keyword,days=input.range_days||14,r=[];
 try{var ms=getDataSheet('メモ');if(ms.getLastRow()>1){var md=ms.getDataRange().getValues();for(var i=1;i<md.length;i++)if(md[i][2]!=='DELETED'&&String(md[i][3]||'').indexOf(kw)!==-1)r.push('📝メモ: '+md[i][3]+' ('+md[i][1]+')');}}catch(e){}
